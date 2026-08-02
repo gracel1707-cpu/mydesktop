@@ -610,7 +610,7 @@
   .book-row .bbar i { display:block; height:100%; border-radius:999px; }
   .book-row .bpct { font-size:14px; font-weight:800; letter-spacing:-.02em; flex:0 0 auto; }
 
-  /* 本周目标 / 通用目标条 */
+  /* 长线计划 / 通用目标条 */
   .goal-list { display:flex; flex-direction:column; gap:13px; }
   .goal-row .gt { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; margin-bottom:7px; }
   .goal-row .gt .gp { margin-left:auto; font-size:12.5px; font-weight:800; color:var(--text-secondary); letter-spacing:-.02em; }
@@ -870,7 +870,7 @@ const CONFIG = {
   eventTypes: [
     { key:"work",     label:"工作", color:"var(--accent)",    tint:"rgba(77,217,255,.15)" },
     { key:"play",     label:"游玩", color:"var(--module-3)",  tint:"rgba(255,92,138,.15)" },
-    { key:"personal", label:"个人", color:"var(--module-4)",  tint:"rgba(92,255,157,.15)" },
+    { key:"personal", label:"私人", color:"var(--module-4)",  tint:"rgba(92,255,157,.15)" },
   ],
 
   // 快速记录按钮（点了直接给对应模块新建）
@@ -892,7 +892,7 @@ const CONFIG = {
       seed:[ {id:21,title:"今天开心了吗？",log:{}}, {id:22,title:"今天学习了吗？",log:{}}, {id:23,title:"今天运动了吗？",log:{}} ] },
     { key:"read", name:"在读好书", icon:"book", tint:"rgba(180,106,255,.08)", color:"var(--module-2)", type:"progress", unit:"页", desc:"书籍进度·摘录·想法",
       seed:[ {id:31,title:"《认知觉醒》",current:168,target:300,unit:"页",note:"第 7 章：习惯的复利，早晚各读 30 分钟"}, {id:32,title:"《原子习惯》",current:90,target:260,unit:"页",note:"聚焦身份认同的养成，做好读书笔记"} ] },
-    { key:"sport", name:"本周目标", icon:"target", tint:"rgba(255,180,84,.08)", color:"var(--module-5)", type:"progress", unit:"次", desc:"运动·锻炼·本周目标进度",
+    { key:"sport", name:"长线计划", icon:"target", tint:"rgba(255,180,84,.08)", color:"var(--module-5)", type:"progress", unit:"次", desc:"运动·锻炼·长线计划进度",
       seed:[ {id:41,title:"力量训练",current:12,target:20,unit:"分钟",note:"核心 + 上肢，组间休息 60 秒"}, {id:42,title:"跑步",current:30,target:40,unit:"分钟",note:"慢跑热身，配速 6 分半保持心率"} ] },
     { key:"money", name:"记账本", icon:"wallet", tint:"rgba(255,92,138,.08)", color:"var(--module-3)", type:"finance", desc:"收入·支出·分类·占比",
       categories:["日常","购物","娱乐","报销","工资","副业"],
@@ -1318,7 +1318,7 @@ function calendarTileHTML(){
   }).join("");
   return `<div class="tile b8"><div class="tile-h"><span class="tic">${icon("calendar",16)}</span><div class="tt"><span class="en">SCHEDULE · 月历日程</span><span class="zh">${monthNames[m]} ${y}</span></div><span class="r">${monthEvents.length} 项</span></div>
     <div class="cal-grid">${dows.map(d=>`<div class="cal-dow">${d}</div>`).join("")}${grid}</div>
-    <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>混合</span></div>
+    <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>命苦</span></div>
     </div>`;
 }
 
@@ -1350,16 +1350,20 @@ function booksTileHTML(){
     <div class="book-list">${rows}</div></div>`;
 }
 
-/* 本周目标：sport (progress) 各项进度条 */
+/* 长线计划：sport (progress) 各项进度条 */
 function goalsTileHTML(){
   const all=data.sport||[]; const colors=["var(--module-3)","var(--module-1)","var(--module-2)","var(--module-4)","var(--module-5)"];
   const rows=all.length? all.map((x,i)=>{ const pct=Math.min(100,Math.round((x.current/x.target)*100||0)); const col=colors[i%colors.length];
+    const done=pct>=100; const expired=x.endDate&&x.endDate<isoToday()&&!done;
+    const statusTag=done?`<span style="color:var(--module-4);font-size:11px;margin-left:4px">已达成</span>`
+      :expired?`<span style="color:#ff5c5c;font-size:11px;margin-left:4px">已过期</span>`:'';
+    const dateRange=(x.startDate||x.endDate)?`<div class="bsub" style="font-size:11px;color:var(--text-tertiary);margin-top:1px">${x.startDate||'?'} → ${x.endDate||'无限'}</div>`:'';
     return `<div class="book-row"><span class="spine" style="background:${col}">${icon("activity",16)}</span>
-      <div class="bmid"><div class="btt">${pct>=100?`<span style="color:var(--module-1);display:inline-flex;vertical-align:-2px;margin-right:3px">${icon("check",13,2.6)}</span>`:''}${esc(x.title)}</div>
-        <div class="bsub">${x.current}/${x.target} ${x.unit||'次'}</div>
-        <div class="bbar"><i style="width:${pct}%;background:${col}"></i></div></div><span class="bpct" style="color:${col}">${pct}%</span></div>`; }).join("")
+      <div class="bmid"><div class="btt">${done?`<span style="color:var(--module-1);display:inline-flex;vertical-align:-2px;margin-right:3px">${icon("check",13,2.6)}</span>`:''}${esc(x.title)}${statusTag}</div>
+        <div class="bsub">${x.current}/${x.target} ${x.unit||'次'}</div>${dateRange}
+        <div class="bbar"><i style="width:${pct}%;background:${done?'var(--module-4)':expired?'#ff5c5c':col}"></i></div></div><span class="bpct" style="color:${col}">${pct}%</span></div>`; }).join("")
     : `<div class="focus-empty">还没有锻炼目标，去「每日锻炼」添加吧</div>`;
-  return `<div class="tile b4"><div class="tile-h"><span class="tic">${icon("activity",16)}</span><div class="tt"><span class="en">WEEKLY GOALS</span><span class="zh">本周目标</span></div><span class="r js-open" data-open="sport">${all.length} 项</span></div>
+  return `<div class="tile b4"><div class="tile-h"><span class="tic">${icon("activity",16)}</span><div class="tt"><span class="en">LONG-TERM GOALS</span><span class="zh">长线计划</span></div><span class="r js-open" data-open="sport">${all.length} 项</span></div>
     <div class="book-list">${rows}</div></div>`;
 }
 
@@ -1474,7 +1478,11 @@ function renderInsight(){
   const cards=CONFIG.modules.map(m=>{ const it=data[m.key]||[]; let main="", pct=0;
     if(m.type==="todo"){ main=`${it.filter(x=>x.done).length}/${it.length} 已完成`; pct=it.length?Math.round(it.filter(x=>x.done).length/it.length*100):0; }
     else if(m.type==="checkin"){ const t=today(); main=`今日 ${it.filter(x=>x.log&&x.log[t]).length}/${it.length} 打卡`; pct=it.length?Math.round(it.filter(x=>x.log&&x.log[t]).length/it.length*100):0; }
-    else if(m.type==="progress"){ pct=avgProgress(it).value; main=`平均进度 ${pct}%`; }
+    else if(m.type==="progress"){ const todayIso=isoToday();
+      const doneN=it.filter(x=>((x.current/x.target)*100||0)>=100).length;
+      const activeN=it.filter(x=>((x.current/x.target)*100||0)<100 && (!x.endDate||x.endDate>=todayIso)).length;
+      const expiredN=it.filter(x=>((x.current/x.target)*100||0)<100 && x.endDate&&x.endDate<todayIso).length;
+      pct=avgProgress(it).value; main=`进行 ${activeN} · 达成 ${doneN} · 未完 ${expiredN}`; }
     else if(m.type==="finance"){ const e=it.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0); const inc=it.filter(x=>x.type==="income").reduce((a,x)=>a+ +x.amount,0); main=`收 ¥${inc} · 支 ¥${e}`; }
     else main=`${it.length} 条记录`;
     return `<div class="pin" data-open="${m.key}" style="cursor:pointer">
@@ -1517,7 +1525,7 @@ function renderInsight(){
         <button class="btn" id="cal-add" style="margin-left:auto;background:var(--accent);color:var(--on-accent);font-size:12px;padding:5px 12px">${icon("plus",14,2.2)}新建</button>
       </div>
       <div class="cal-grid">${dows.map(d=>`<div class="cal-dow">${d}</div>`).join("")}${grid}</div>
-      <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>混合</span></div>
+      <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>命苦</span></div>
     </div>
     <div class="sec-title">${calSelected} 的日程</div>
     <div class="cal-events">${evList}</div>`;
@@ -1634,8 +1642,11 @@ function renderModule(key){
     const done=all.filter(x=>x.log&&x.log[t]).length;
     head=headHero(m, `${done}/${all.length}`, "今日已打卡");
   } else if(m.type==="progress"){
-    const p=avgProgress(all);
-    head=headHero(m, `${p.value}%`, `平均进度 · ${all.length} 项`);
+    const p=avgProgress(all); const todayIso=isoToday();
+    const doneN=all.filter(x=>((x.current/x.target)*100||0)>=100).length;
+    const activeN=all.filter(x=>((x.current/x.target)*100||0)<100 && (!x.endDate||x.endDate>=todayIso)).length;
+    const expiredN=all.filter(x=>((x.current/x.target)*100||0)<100 && x.endDate&&x.endDate<todayIso).length;
+    head=headHero(m, `${p.value}%`, `进行${activeN} · 达成${doneN} · 未完${expiredN}`);
   } else if(m.type==="note"){
     const todayN=all.filter(x=>x.date===t).length;
     head=headHero(m, `${all.length}`, `条记录 · 今日 ${todayN} 条`, null);
@@ -1706,14 +1717,18 @@ function sideStats(m, all){
 
   if(m.type==="progress"){
     const p=avgProgress(all);
+    const todayIso=isoToday();
     const doneN=all.filter(x=>((x.current/x.target)*100||0)>=100).length;
+    const activeN=all.filter(x=>((x.current/x.target)*100||0)<100 && (!x.endDate||x.endDate>=todayIso)).length;
+    const expiredN=all.filter(x=>((x.current/x.target)*100||0)<100 && x.endDate&&x.endDate<todayIso).length;
     const totalCur=all.reduce((a,x)=>a+ (+x.current||0),0);
     const totalTgt=all.reduce((a,x)=>a+ (+x.target||0),0);
     return `<div class="side-card"><div class="sh">${icon("target",15)} 总体进度</div>
         <div class="side-ring"><div class="dial">${ringSVG(p.value,m.color)}<span class="mid"><span class="big" style="color:${m.color}">${p.value}%</span><span class="cap">平均进度</span></span></div></div></div>
       <div class="side-card"><div class="sh">${icon("list",15)} 数据统计</div>
-        ${row("进行项目",`${all.length} 项`)}
+        ${row("进行项目",`${activeN} 项`)}
         ${row("已达成",`${doneN} 项`)}
+        ${row("未完成",`<span style="color:#ff5c5c">${expiredN} 项</span>`)}
         ${row("累计完成",`${totalCur} ${all[0]?.unit||m.unit||''}`)}
         ${row("总目标量",`${totalTgt} ${all[0]?.unit||m.unit||''}`)}</div>`;
   }
@@ -1785,10 +1800,15 @@ function recHTML(m,x){
       <div class="body" data-edit="${x.id}"><span class="rname">${esc(x.title)}</span>
       <span class="streak">${icon("flame",13)} 连续 ${st} 天</span>${on?'<span class="badge" style="background:var(--accent-muted);color:var(--accent)">今日已打卡</span>':''}${customBlock}</div></div></div>`; }
   if(m.type==="progress"){ const pct=Math.min(100,Math.round((x.current/x.target)*100||0));
+    const done=pct>=100;
+    const expired=x.endDate&&x.endDate<isoToday()&&!done;
+    const statusBadge=done?`<span class="badge" style="background:rgba(92,255,157,.15);color:#5cff9d">已达成</span>`
+      :expired?`<span class="badge" style="background:rgba(255,92,92,.12);color:#ff5c5c">已过期</span>`:'';
+    const dateRange=(x.startDate||x.endDate)?`<span class="rdate" style="margin-left:0;color:var(--text-tertiary)">${x.startDate||'?'} → ${x.endDate||'无限'}</span>`:'';
     return `<div class="rec ${layoutCls}">${acts}<div class="top" style="padding-right:60px"><div class="body" data-edit="${x.id}">
-      <span class="rname">${esc(x.title)}</span>
-      <div class="pbar"><i style="width:${pct}%;background:${m.color}"></i></div>
-      <span class="rdate" style="margin-left:0;color:var(--text-secondary)">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%</span>
+      <span class="rname ${done?'done':''}">${esc(x.title)}</span>${statusBadge}
+      <div class="pbar"><i style="width:${pct}%;background:${done?'var(--module-4)':expired?'#ff5c5c':m.color}"></i></div>
+      <span class="rdate" style="margin-left:0;color:var(--text-secondary)">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%</span>${dateRange}
       ${x.note?`<div class="rnote">${esc(x.note)}</div>`:''}${customBlock}</div></div></div>`; }
   if(m.type==="finance"){ const inc=x.type==="income";
     return `<div class="rec ${layoutCls}">${acts}<div class="top" style="padding-right:60px"><div class="body" data-edit="${x.id}">
@@ -1836,6 +1856,8 @@ function openEditor(key,item){
       <div class="frow"><div class="field"><label>当前</label><input id="f-cur" type="number" value="${d.current??0}"/></div>
       <div class="field"><label>目标</label><input id="f-tgt" type="number" value="${d.target??1}"/></div>
       <div class="field"><label>单位</label><input id="f-unit" value="${attr(d.unit||m.unit||'')}"/></div></div>
+      <div class="frow"><div class="field"><label>起始</label><input id="f-start" type="date" value="${d.startDate||isoToday()}"/></div>
+      <div class="field"><label>完成</label><input id="f-end" type="date" value="${d.endDate||''}"/></div></div>
       <div class="field"><label>摘录 / 想法</label><textarea id="f-note" placeholder="随手记">${esc(d.note||'')}</textarea></div>`;
   } else if(m.type==="finance"){
     fields=`<div class="field"><label>类型</label><div class="seg" id="f-ftype">
@@ -1876,7 +1898,7 @@ function openEditor(key,item){
     d.title=(val("#f-title")||"").trim()||"未命名";
     d.layout=seg("#f-layout")||'default';
     if(m.type==="todo"){ d.priority=seg("#f-prio")||d.priority; d.note=(val("#f-note")||"").trim(); }
-    else if(m.type==="progress"){ d.current=Math.max(0,+val("#f-cur")||0); d.target=Math.max(1,+val("#f-tgt")||1); d.unit=(val("#f-unit")||"").trim(); d.note=(val("#f-note")||"").trim(); }
+    else if(m.type==="progress"){ d.current=Math.max(0,+val("#f-cur")||0); d.target=Math.max(1,+val("#f-tgt")||1); d.unit=(val("#f-unit")||"").trim(); d.startDate=val("#f-start")||isoToday(); d.endDate=val("#f-end")||""; d.note=(val("#f-note")||"").trim(); }
     else if(m.type==="finance"){ d.type=seg("#f-ftype")||"expense"; d.amount=Math.max(0,+val("#f-amt")||0); d.category=seg("#f-cat")||(m.categories&&m.categories[0])||"其他"; d.date=val("#f-date"); }
     else if(m.type==="note"){ d.mood=seg("#f-mood")||d.mood||""; d.content=(val("#f-content")||"").trim(); d.date=val("#f-date"); }
     // save custom fields
@@ -1893,7 +1915,7 @@ function openEditor(key,item){
 function newItem(m){ const base={id:Date.now()}; let item;
   if(m.type==="todo") item={...base,title:"",priority:(m.priorities&&m.priorities[1]?m.priorities[1].key:"P1"),done:false,note:""};
   else if(m.type==="checkin") item={...base,title:"",log:{}};
-  else if(m.type==="progress") item={...base,title:"",current:0,target:(m.unit==="页"?100:20),unit:m.unit||"",note:""};
+  else if(m.type==="progress") item={...base,title:"",current:0,target:(m.unit==="页"?100:20),unit:m.unit||"",note:"",startDate:isoToday(),endDate:""};
   else if(m.type==="finance") item={...base,title:"",type:"expense",amount:"",category:(m.categories&&m.categories[0])||"其他",date:isoToday()};
   else item={...base,title:"",content:"",mood:(m.moods&&m.moods[0])||"",date:isoToday()};
   // initialize custom fields

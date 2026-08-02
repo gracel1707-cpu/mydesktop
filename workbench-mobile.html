@@ -710,7 +710,7 @@ const CONFIG = {
   eventTypes: [
     { key: "work",     label: "工作", color: "var(--accent)",    tint: "rgba(77,217,255,.15)" },
     { key: "play",     label: "游玩", color: "var(--module-3)",  tint: "rgba(255,92,138,.15)" },
-    { key: "personal", label: "个人", color: "var(--module-4)",  tint: "rgba(92,255,157,.15)" },
+    { key: "personal", label: "私人", color: "var(--module-4)",  tint: "rgba(92,255,157,.15)" },
   ],
 
   // 快速记录按钮（点了直接给对应模块新建）
@@ -754,7 +754,7 @@ const CONFIG = {
       ],
     },
     {
-      key: "sport", name: "本周目标", icon: "target", tint: "rgba(255,180,84,.08)", color: "var(--module-5)", type: "progress", unit: "次", desc: "运动·锻炼·本周目标进度",
+      key: "sport", name: "长线计划", icon: "target", tint: "rgba(255,180,84,.08)", color: "var(--module-5)", type: "progress", unit: "次", desc: "运动·锻炼·长线计划进度",
       seed: [
         { id: 41, title: "力量训练", current: 12, target: 20, unit: "分钟", note: "核心 + 上肢，组间休息 60 秒" },
         { id: 42, title: "跑步", current: 30, target: 40, unit: "分钟", note: "慢跑热身，配速 6 分半保持心率" },
@@ -980,14 +980,18 @@ function renderHome(){
       <div class="ev-info"><div class="ev-title">${esc(ev.title)}</div><div class="ev-time">${formatEventTime(ev)}</div></div></div>`;
   }).join("") : `<div class="cal-empty-day">暂无行程，点击月历日期新建</div>`;
 
-  // 本周目标 (read + sport modules)
+  // 长线计划 (read + sport modules)
   const goalItems = [...(data.read||[]).map(x=>({...x,_mod:"read"})), ...(data.sport||[]).map(x=>({...x,_mod:"sport"}))];
   const goalList = goalItems.length ? goalItems.slice(0,3).map(x=>{
     const m=modOf(x._mod); const pct=Math.round((x.current/x.target)*100||0);
+    const done=pct>=100; const expired=x.endDate&&x.endDate<isoToday()&&!done;
+    const statusTag=done?`<span style="color:#5cff9d;font-size:11px"> · 已达成</span>`
+      :expired?`<span style="color:#ff5c5c;font-size:11px"> · 已过期</span>`:'';
+    const dateRange=(x.startDate||x.endDate)?`<span style="color:var(--text-tertiary);font-size:11px;display:block;margin-top:2px">${x.startDate||'?'} → ${x.endDate||'无限'}</span>`:'';
     return `<div class="pin" data-open="${x._mod}"><span class="pin-ic" style="color:${m.color}">${icon(m.icon,17)}</span>
-      <div class="pin-b"><div class="pin-t">${esc(x.title)}</div><div class="pin-m">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%</div></div>
+      <div class="pin-b"><div class="pin-t">${esc(x.title)}${statusTag}</div><div class="pin-m">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%${dateRange}</div></div>
       <span class="arw">${icon("chevron",14,2)}</span></div>`;
-  }).join("") : `<div class="pin-empty">去「在读好书」和「本周目标」设置你的计划</div>`;
+  }).join("") : `<div class="pin-empty">去「在读好书」和「长线计划」设置你的计划</div>`;
 
   $("#screen").innerHTML = `
     <div class="greet"><div><h1>${hi}，${data.__owner || CONFIG.owner}</h1><p id="greetSub" contenteditable="true" spellcheck="false" title="点击可编辑">${esc(data.__greet || '它们生也快乐，死也快乐，杯子里总有酒喝。')}</p></div></div>
@@ -1001,11 +1005,11 @@ function renderHome(){
     <div class="panel cal-panel"><div class="ph">${icon("calendar",15)} ${monthNames[cm]} ${cy}<span class="avg">${monthEvents.length} 项</span></div>
       <div class="cal-dow-row">${dows.map(d=>`<span class="${d==='六'||d==='日'?'wk':''}">${d}</span>`).join("")}</div>
       <div class="cal-grid">${calGrid}</div>
-      <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>混合</span></div>
+      <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>命苦</span></div>
     </div>
     <div class="sec-title">近期日程</div>
     <div class="cal-events">${evList}</div>
-    <div class="sec-title">本周目标</div>
+    <div class="sec-title">长线计划</div>
     <div class="pin-list">${goalList}</div>`;
   wireHome();
 }
@@ -1283,7 +1287,11 @@ function renderInsight(){
     const it=data[m.key]||[]; let pct=0, label="";
     if(m.type==="todo"){ const d=it.filter(x=>x.done).length; pct=it.length?Math.round(d/it.length*100):0; label=`${d}/${it.length}`; }
     else if(m.type==="checkin"){ const t=today(); const d=it.filter(x=>x.log&&x.log[t]).length; pct=it.length?Math.round(d/it.length*100):0; label=`${d}/${it.length}`; }
-    else if(m.type==="progress"){ pct=avgProgress(it).value; label=`${pct}%`; }
+    else if(m.type==="progress"){ pct=avgProgress(it).value; const todayIso=isoToday();
+      const doneN=it.filter(x=>((x.current/x.target)*100||0)>=100).length;
+      const activeN=it.filter(x=>((x.current/x.target)*100||0)<100 && (!x.endDate||x.endDate>=todayIso)).length;
+      const expiredN=it.filter(x=>((x.current/x.target)*100||0)<100 && x.endDate&&x.endDate<todayIso).length;
+      label=`进行${activeN} · 达成${doneN} · 未完${expiredN}`; }
     else if(m.type==="finance"){ const e=it.filter(x=>x.type==="expense").reduce((s,x)=>s+ +x.amount,0); label=`¥${e}`; }
     else { label=`${it.length} 条`; }
     return {m, pct, label};
@@ -1328,6 +1336,21 @@ function renderInsight(){
   const allEvs = getEvents().sort((a,b)=>a.start.localeCompare(b.start));
   const upcomingEvs = allEvs.filter(e=>e.end.slice(0,10)>=isoToday()).slice(0,5);
   const evList=upcomingEvs.length ? upcomingEvs.map(ev=>{
+
+  // 长线计划统计
+  const progressMods=CONFIG.modules.filter(m=>m.type==="progress");
+  const progressAll=progressMods.flatMap(m=>(data[m.key]||[]).map(x=>({...x,_m:m})));
+  const todayIso2=isoToday();
+  const pDone=progressAll.filter(x=>((x.current/x.target)*100||0)>=100).length;
+  const pActive=progressAll.filter(x=>((x.current/x.target)*100||0)<100 && (!x.endDate||x.endDate>=todayIso2)).length;
+  const pExpired=progressAll.filter(x=>((x.current/x.target)*100||0)<100 && x.endDate&&x.endDate<todayIso2).length;
+  const progressStatsTotal=progressAll.length;
+  const progressStatsHTML = `
+    <div class="mini"><div class="l">进行项目</div><div class="v" style="color:var(--module-1)">${pActive} 项</div></div>
+    <div class="mini"><div class="l">已达成</div><div class="v" style="color:var(--module-4)">${pDone} 项</div></div>
+    <div class="mini"><div class="l">未完成</div><div class="v" style="color:#ff5c5c">${pExpired} 项</div></div>`;
+
+  const evList=upcomingEvs.length ? upcomingEvs.map(ev=>{
     const t=evTypeOf(ev.type);
     return `<div class="cal-event" data-evid="${ev.id}"><span class="ev-bar" style="background:${t.color}"></span>
       <div class="ev-info"><div class="ev-title">${esc(ev.title)}</div><div class="ev-time">${formatEventTime(ev)}</div></div>
@@ -1349,14 +1372,17 @@ function renderInsight(){
       </div>
       <div class="cal-dow-row">${dows.map(d=>`<span class="${d==='六'||d==='日'?'wk':''}">${d}</span>`).join("")}</div>
       <div class="cal-grid">${calGrid}</div>
-      <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>混合</span></div>
+      <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>命苦</span></div>
     </div>
     <div class="sec-title">近期日程</div>
     <div class="cal-events">${evList}</div>
     <div class="sec-title">支出构成</div>
     <div class="panel"><div class="ph">${icon("wallet",15)} 支出构成<span class="avg">合计 ¥${totalExp}</span></div>
       <div class="donut-wrap"><div class="donut">${donut}${segs.length?`<span class="donut-mid">¥${totalExp}</span>`:''}</div>
-        <div class="donut-legend">${legend}</div></div></div>`;
+        <div class="donut-legend">${legend}</div></div></div>
+    <div class="sec-title">长线计划统计</div>
+    <div class="panel"><div class="ph">${icon("target",15)} 长线计划<span class="avg">共 ${progressStatsTotal} 项</span></div>
+      <div class="mod-summary">${progressStatsHTML}</div></div>`;
   $("#screen").querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>go(el.dataset.open));
   // 日历导航
   $("#cal-prev").onclick=()=>{ evCalMonth=new Date(cy, cm-1, 1); renderInsight(); };
@@ -1483,8 +1509,11 @@ function renderModule(key){
     const done=it.filter(x=>x.log&&x.log[t]).length; const pct=it.length?Math.round(done/it.length*100):0;
     head=headHero(m, `${done}/${it.length}`, "今日已打卡", pct);
   } else if(m.type==="progress"){
-    const p=avgProgress(it);
-    head=headHero(m, `${p.value}%`, `平均进度 · ${it.length} 项`, p.value);
+    const p=avgProgress(it); const todayIso=isoToday();
+    const doneN=it.filter(x=>((x.current/x.target)*100||0)>=100).length;
+    const activeN=it.filter(x=>((x.current/x.target)*100||0)<100 && (!x.endDate||x.endDate>=todayIso)).length;
+    const expiredN=it.filter(x=>((x.current/x.target)*100||0)<100 && x.endDate&&x.endDate<todayIso).length;
+    head=headHero(m, `${p.value}%`, `进行${activeN} · 达成${doneN} · 未完${expiredN}`, p.value);
   } else if(m.type==="note"){
     const todayN=it.filter(x=>x.date===t).length;
     head=headHero(m, `${it.length}`, `条记录 · 今日 ${todayN} 条`, null);
@@ -1537,10 +1566,16 @@ function recHTML(m,x){
   }
   if(m.type==="progress"){
     const pct=Math.min(100,Math.round((x.current/x.target)*100||0));
+    const done=pct>=100;
+    const expired=x.endDate&&x.endDate<isoToday()&&!done;
+    const statusCls=done?'done':'';
+    const statusBadge=done?`<span class="badge" style="background:rgba(92,255,157,.15);color:#5cff9d">已达成</span>`
+      :expired?`<span class="badge" style="background:rgba(255,92,92,.12);color:#ff5c5c">已过期</span>`:'';
+    const dateRange=(x.startDate||x.endDate)?`<span style="color:var(--text-tertiary);font-size:12px">${x.startDate||'?'} → ${x.endDate||'无限'}</span>`:'';
     return `<div class="rec ${layoutCls}">${acts}<div class="top"><div class="body" data-edit="${x.id}">
-      <div class="rname">${esc(x.title)}</div>
-      <div class="rmeta"><span style="color:var(--text-secondary);font-size:13px">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%</span></div>
-      <div class="pbar"><i style="width:${pct}%;background:${m.color}"></i></div>
+      <div class="rname ${statusCls}">${esc(x.title)}</div>
+      <div class="rmeta">${statusBadge}<span style="color:var(--text-secondary);font-size:13px">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%</span>${dateRange}</div>
+      <div class="pbar"><i style="width:${pct}%;background:${done?'var(--module-4)':expired?'#ff5c5c':m.color}"></i></div>
       ${x.note?`<div class="rnote">${esc(x.note)}</div>`:''}${customBlock}</div></div></div>`;
   }
   if(m.type==="finance"){
@@ -1595,6 +1630,8 @@ function openEditor(key, item){
       <div class="frow"><div class="field"><label>当前</label><input id="f-cur" type="number" value="${d.current??0}"/></div>
       <div class="field"><label>目标</label><input id="f-tgt" type="number" value="${d.target??1}"/></div>
       <div class="field"><label>单位</label><input id="f-unit" value="${attr(d.unit||m.unit||'')}"/></div></div>
+      <div class="frow"><div class="field"><label>起始</label><input id="f-start" type="date" value="${d.startDate||isoToday()}"/></div>
+      <div class="field"><label>完成</label><input id="f-end" type="date" value="${d.endDate||''}"/></div></div>
       <div class="field"><label>摘录 / 想法</label><textarea id="f-note" placeholder="随手记">${esc(d.note||'')}</textarea></div>`;
   } else if(m.type==="finance"){
     fields=`<div class="field"><label>类型</label><div class="seg" id="f-ftype">
@@ -1643,7 +1680,7 @@ function openEditor(key, item){
     d.title=(val("#f-title")||"").trim()||"未命名";
     d.layout=seg("#f-layout")||'default';
     if(m.type==="todo"){ d.priority=seg("#f-prio")||d.priority; d.note=(val("#f-note")||"").trim(); }
-    else if(m.type==="progress"){ d.current=Math.max(0,+val("#f-cur")||0); d.target=Math.max(1,+val("#f-tgt")||1); d.unit=(val("#f-unit")||"").trim(); d.note=(val("#f-note")||"").trim(); }
+    else if(m.type==="progress"){ d.current=Math.max(0,+val("#f-cur")||0); d.target=Math.max(1,+val("#f-tgt")||1); d.unit=(val("#f-unit")||"").trim(); d.startDate=val("#f-start")||isoToday(); d.endDate=val("#f-end")||""; d.note=(val("#f-note")||"").trim(); }
     else if(m.type==="finance"){ d.type=seg("#f-ftype")||"expense"; d.amount=Math.max(0,+val("#f-amt")||0); d.category=seg("#f-cat")||(m.categories&&m.categories[0])||"其他"; d.date=val("#f-date"); }
     else if(m.type==="note"){ d.mood=seg("#f-mood")||d.mood||""; d.content=(val("#f-content")||"").trim(); d.date=val("#f-date"); }
     // save custom fields
@@ -1662,7 +1699,7 @@ function newItem(m){
   let item;
   if(m.type==="todo") item={...base, title:"", priority:(m.priorities&&m.priorities[1]?m.priorities[1].key:"P1"), done:false, note:""};
   else if(m.type==="checkin") item={...base, title:"", log:{}};
-  else if(m.type==="progress") item={...base, title:"", current:0, target: (m.unit==="页"?100:20), unit:m.unit||"", note:""};
+  else if(m.type==="progress") item={...base, title:"", current:0, target: (m.unit==="页"?100:20), unit:m.unit||"", note:"", startDate:isoToday(), endDate:""};
   else if(m.type==="finance") item={...base, title:"", type:"expense", amount:"", category:(m.categories&&m.categories[0])||"其他", date:isoToday()};
   else item={...base, title:"", content:"", mood:(m.moods&&m.moods[0])||"", date:isoToday()};
   // initialize custom fields
