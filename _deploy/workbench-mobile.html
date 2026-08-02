@@ -3,11 +3,12 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="打起精神" />
 <link rel="apple-touch-icon" href="assets/app-icon.png" />
+<link rel="manifest" href="manifest.json" />
 <title>今天也要打起精神来！</title>
 <style>
   /* ============================================================
@@ -74,12 +75,13 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   :focus-visible { outline: 2px solid var(--module-2); outline-offset: 2px; border-radius: 4px; }
   button { -webkit-focus-ring-color: var(--module-2); }
+  html { overflow-x: hidden; }
   html, body { height: 100%; }
   body {
     background: var(--page-bg);
     color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    max-width: 480px; margin: 0 auto; position: relative;
+    width: 100%; max-width: 480px; margin: 0 auto; position: relative;
     min-height: 100vh; overflow-x: hidden;
   }
   body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
@@ -240,23 +242,13 @@
   .hero-bar { height: 5px; border-radius: 999px; background: var(--border); overflow:hidden; margin-top: 10px; }
   .hero-bar i { display:block; height:100%; border-radius:999px; }
 
-  /* record thumbnail */
-  .rec .thumb { width:48px; height:48px; border-radius:var(--radius-tile); object-fit:cover; flex:0 0 auto; margin-right:2px; }
   .rec .meta-line { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px; }
   .rec .meta-tag { font-size:12px; font-weight:600; color:var(--text-secondary); }
   .rec .meta-tag::before { content:"·"; margin-right:6px; color:var(--text-tertiary); }
   .rec .meta-tag:first-child::before { display:none; }
 
-  /* ---- layout variants (open-ended: add .rec-layout-xxx in <style> to extend) ---- */
-  /* feature: 大图在上 + 标题覆盖 + 正文在下 */
-  .rec.rec-layout-feature { flex-direction:column; padding:0; overflow:hidden; }
-  .rec.rec-layout-feature .thumb { width:100%; height:140px; border-radius:0; margin:0; }
-  .rec.rec-layout-feature .feat-title { padding:10px 12px 4px; font-size:15px; font-weight:700; color:var(--text); }
-  .rec.rec-layout-feature .feat-body { padding:0 12px 12px; font-size:13px; color:var(--text-secondary); }
-  /* quote: 大字居中 + 留白 */
-  .rec.rec-layout-quote { flex-direction:column; align-items:center; text-align:center; padding:20px 16px; }
-  .rec.rec-layout-quote .quote-text { font-size:16px; font-weight:600; line-height:1.6; color:var(--text); }
-  .rec.rec-layout-quote .quote-meta { margin-top:8px; font-size:12px; color:var(--text-tertiary); }
+  /* ---- layout variants ---- */
+  .rec.rec-layout-default { }
 
   /* ---------- bottom nav ---------- */
   .nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; height: var(--nav-h);
@@ -296,12 +288,20 @@
   .drawer .dfoot-btn:active { background: var(--drawer-hover); opacity: .8; }
 
   /* 同步状态指示器 */
-  .sync-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 4px; vertical-align: middle; }
-  .sync-dot.sync-off    { background: var(--text-tertiary); }
-  .sync-dot.sync-synced { background: var(--module-4); box-shadow: 0 0 4px var(--module-4); }
-  .sync-dot.sync-syncing{ background: var(--module-5); animation: sync-pulse .8s infinite; }
-  .sync-dot.sync-error  { background: var(--danger); }
-  @keyframes sync-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  /* login / auth */
+  .dfoot-auth { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: var(--radius-tile); background: var(--surface-nested); cursor: pointer; transition: background .15s; }
+  .dfoot-auth:hover { background: var(--border); }
+  .dfoot-auth .auth-avatar { width: 28px; height: 28px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; font-size: 14px; font-weight: 700; background: var(--module-2); color: #fff; }
+  .dfoot-auth .auth-info { flex: 1; min-width: 0; }
+  .dfoot-auth .auth-email { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dfoot-auth .auth-status { font-size: 10px; color: var(--module-4); }
+  .auth-modal { max-width: 340px; }
+  .auth-modal .tab-row { display: flex; margin-bottom: 16px; border-radius: var(--radius-tile); background: var(--surface-nested); padding: 3px; }
+  .auth-modal .tab-row .tab { flex: 1; text-align: center; padding: 8px; border-radius: var(--radius-control); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: all .15s; }
+  .auth-modal .tab-row .tab.on { background: var(--surface-card); color: var(--text); }
+  .auth-modal .field { margin-bottom: 12px; }
+  .auth-modal .field label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; }
+  .auth-modal .field input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-input); border-radius: var(--radius-tile); background: var(--surface-nested); color: var(--text); font-size: 14px; }
 
   /* ---------- tab bar ---------- */
   .overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--text) 44%, transparent); backdrop-filter: blur(3px); z-index: 60;
@@ -476,21 +476,193 @@
   <div class="dsep"></div>
   <div id="drawerList"></div>
   <div class="dsep"></div>
-  <div class="dfoot" id="drawerFoot">数据 <span id="sync-dot" class="sync-dot sync-off"></span><span id="sync-label">仅本机</span>
+  <div class="dfoot" id="drawerFoot">
     <div class="dfoot-btns">
-      <button class="dfoot-btn" id="btn-sync-setup"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>同步设置</button>
-      <button class="dfoot-btn" id="btn-sync-upload"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button>
-      <button class="dfoot-btn" id="btn-sync-download"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下载</button>
-    </div>
-    <div class="dfoot-btns" style="margin-top:6px">
       <button class="dfoot-btn" id="btn-export"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 14v5H6v-5"/><polyline points="15 11 12 8 9 11"/><line x1="12" y1="8" x2="12" y2="16"/></svg>导出</button>
       <button class="dfoot-btn" id="btn-import"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10v5h12v-5"/><polyline points="9 13 12 16 15 13"/><line x1="12" y1="16" x2="12" y2="8"/></svg>导入</button>
     </div>
+    <div class="dfoot-auth" id="authBar" style="display:none" title="点击管理账号">
+      <div class="auth-avatar" id="authAvatar"></div>
+      <div class="auth-info"><div class="auth-email" id="authEmail"></div><div class="auth-status">已同步</div></div>
+    </div>
+    <button class="dfoot-btn" id="btn-login" style="margin-top:10px;width:100%;justify-content:center;">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> 登录 / 注册
+    </button>
   </div>
   <input type="file" id="importInput" accept="application/json,.json" hidden/>
 </aside>
 
 <script>
+/* ============================================================
+   轻量 Supabase 客户端（纯 fetch，无需外部 CDN）
+   ============================================================ */
+const SUPABASE_URL = 'https://xgzcfukjhhpzzzdquwlh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_wKxBAj2r5wGj3GoSce-ZIw_9RhpJeMk';
+
+// 构建最小化 supabase 兼容对象，直接调用 REST API
+const supabase = {
+  _accessToken: null,
+  _refreshToken: null,
+  _user: null,
+  _listeners: [],
+
+  _headers(){
+    const h = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' };
+    if(this._accessToken) h['Authorization'] = 'Bearer ' + this._accessToken;
+    return h;
+  },
+
+  _setSession(session){
+    this._accessToken = session ? session.access_token : null;
+    this._refreshToken = session ? session.refresh_token : null;
+    this._user = session ? session.user : null;
+    if(session){
+      localStorage.setItem('_wb_session', JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        user: session.user
+      }));
+    } else {
+      localStorage.removeItem('_wb_session');
+    }
+  },
+
+  _notifyListeners(event){
+    this._listeners.forEach(fn => {
+      try { fn(event, this._accessToken ? { access_token: this._accessToken, refresh_token: this._refreshToken, user: this._user } : null); }
+      catch(e){}
+    });
+  },
+
+  auth: {
+    _client: null,
+
+    onAuthStateChange(callback){
+      supabase._client = supabase;
+      supabase._listeners.push(callback);
+    },
+
+    async signUp({ email, password }){
+      const resp = await fetch(SUPABASE_URL + '/auth/v1/signup', {
+        method: 'POST', headers: supabase._headers(),
+        body: JSON.stringify({ email, password })
+      });
+      const data = await resp.json();
+      if(!resp.ok) return { data: { user: null, session: null }, error: { message: data.msg || data.message || '注册失败' } };
+      if(data.session){
+        supabase._setSession(data.session);
+        supabase._notifyListeners('SIGNED_IN');
+        return { data: { user: data.user, session: data.session }, error: null };
+      }
+      return { data: { user: data.user, session: null }, error: null };
+    },
+
+    async signInWithPassword({ email, password }){
+      const resp = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+        method: 'POST', headers: supabase._headers(),
+        body: JSON.stringify({ email, password })
+      });
+      const data = await resp.json();
+      if(!resp.ok) return { data: { user: null, session: null }, error: { message: data.msg || data.error_description || '登录失败' } };
+      supabase._setSession(data);
+      supabase._notifyListeners('SIGNED_IN');
+      return { data: { user: data.user, session: data }, error: null };
+    },
+
+    async signOut(){
+      if(supabase._accessToken){
+        await fetch(SUPABASE_URL + '/auth/v1/logout', {
+          method: 'POST', headers: supabase._headers()
+        }).catch(()=>{});
+      }
+      supabase._setSession(null);
+      supabase._notifyListeners('SIGNED_OUT');
+      return { error: null };
+    },
+
+    async getSession(){
+      // 尝试从 localStorage 恢复
+      if(!supabase._accessToken){
+        try {
+          const saved = JSON.parse(localStorage.getItem('_wb_session'));
+          if(saved && saved.access_token){
+            supabase._accessToken = saved.access_token;
+            supabase._refreshToken = saved.refresh_token;
+            supabase._user = saved.user;
+            // 验证 token 有效
+            const resp = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: supabase._headers() });
+            if(!resp.ok){
+              // token 过期，尝试刷新
+              const refResp = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+                method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: saved.refresh_token })
+              });
+              if(refResp.ok){
+                const refData = await refResp.json();
+                supabase._setSession(refData);
+                return { data: { session: refData } };
+              }
+              supabase._setSession(null);
+              return { data: { session: null } };
+            }
+            return { data: { session: { access_token: saved.access_token, refresh_token: saved.refresh_token, user: saved.user } } };
+          }
+        } catch(e){ supabase._setSession(null); }
+      }
+      if(supabase._accessToken){
+        return { data: { session: { access_token: supabase._accessToken, refresh_token: supabase._refreshToken, user: supabase._user } } };
+      }
+      return { data: { session: null } };
+    }
+  },
+
+  from(table){
+    return {
+      select(cols){
+        return {
+          eq(field, value){
+            return {
+              async limit(n){
+                const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${cols}&${field}=eq.${encodeURIComponent(value)}&limit=${n}`, {
+                  headers: supabase._headers()
+                });
+                if(!resp.ok) return { data: null, error: { message: '查询失败' } };
+                return { data: await resp.json(), error: null };
+              }
+            };
+          }
+        };
+      },
+      async upsert(row){
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+          method: 'POST',
+          headers: Object.assign(supabase._headers(), { 'Prefer': 'resolution=merge-duplicates' }),
+          body: JSON.stringify(row)
+        });
+        if(!resp.ok) return { error: { message: '保存失败' } };
+        return { error: null };
+      }
+    };
+  },
+
+  channel(name){
+    return {
+      on(event, filter, callback){
+        // 本地存储轮询替代实时订阅（每 5 秒检查）
+        return this;
+      },
+      subscribe(){
+        return { unsubscribe: ()=>{} };
+      }
+    };
+  },
+
+  removeChannel(ch){ }
+};
+
+let supabaseUser = null;
+let supabaseSession = null;
+let realtimeChannel = null;
 /* ============================================================
    CONFIG — 唯一需要定制的地方。
    modules 里每个模块 = 一个功能页；type 决定它长什么样、记什么字段。
@@ -566,9 +738,9 @@ const CONFIG = {
       key: "checkin", name: "习惯打卡", icon: "paw", tint: "rgba(92,255,157,.08)", color: "var(--module-4)",
       type: "checkin", desc: "每日打卡·连续天数·猫爪印记",
       seed: [
-        { id: 21, title: "喝够 8 杯水", log: {} },
-        { id: 22, title: "23:30 前睡觉", log: {} },
-        { id: 23, title: "维生素 / 补剂", log: {} },
+        { id: 21, title: "今天开心了吗？", log: {} },
+        { id: 22, title: "今天学习了吗？", log: {} },
+        { id: 23, title: "今天运动了吗？", log: {} },
       ],
     },
     {
@@ -645,119 +817,55 @@ function avgProgress(list){
 const modOf = k => CONFIG.modules.find(m=>m.key===k);
 const $ = s => document.querySelector(s);
 
+function subscribeRealtime(){
+  if(!supabase || !supabaseUser) return;
+  if(realtimeChannel) supabase.removeChannel(realtimeChannel);
+  realtimeChannel = supabase
+    .channel('data-changes')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${supabaseUser.id}` },
+      (payload) => {
+        if(payload.new && payload.new.data){
+          data = payload.new.data;
+          render();
+        }
+      }
+    )
+    .subscribe();
+}
+
+async function syncSave(){
+  if(!supabase || !supabaseUser) return;
+  const row = { user_id: supabaseUser.id, data: data, updated_at: new Date().toISOString() };
+  const { error } = await supabase.from('user_data').upsert(row);
+  if(error){ console.warn('保存失败:', error); return false; }
+  return true;
+}
+
+async function syncLoad(){
+  if(!supabase || !supabaseUser) return;
+  const { data: rows, error } = await supabase.from('user_data').select('data').eq('user_id', supabaseUser.id).limit(1);
+  if(error){ console.warn('加载失败:', error); return null; }
+  if(rows && rows.length>0) return rows[0].data;
+  return null;
+}
+
 const store = {
   load(){
-    const raw = localStorage.getItem(CONFIG.storageKey);
-    if(raw){ try { return JSON.parse(raw); } catch(e){} }
+    const cached = localStorage.getItem(CONFIG.storageKey);
+    if(cached){ try { return JSON.parse(cached); } catch(e){ } }
     const d = {};
     CONFIG.modules.forEach(m => d[m.key] = structuredClone(m.seed||[]));
     return d;
   },
   save(){ localStorage.setItem(CONFIG.storageKey, JSON.stringify(data)); },
-  sync(){
-    if(!gist.ready) return;
-    gist.status = 'syncing'; renderSyncStatus();
-    gist.push().then(()=>{ renderSyncStatus(); }).catch(e=>{
-      gist.status = 'error'; renderSyncStatus();
-      console.warn('同步失败:', e);
-    });
-  },
-  async pullFromGist(){
-    if(!gist.ready) return false;
-    try {
-      const remote = await gist.pull();
-      if(remote && typeof remote === 'object'){
-        data = remote;
-        CONFIG.modules.forEach(m => { if(!data[m.key]) data[m.key] = structuredClone(m.seed||[]); });
-        this.save();
-        gist.status = 'synced'; renderSyncStatus();
-        return true;
-      }
-    } catch(e){ gist.status = 'error'; renderSyncStatus(); console.warn('拉取失败:', e); }
-    return false;
-  }
+  sync(){ syncSave(); }
 };
-
-/* ---------- 同步引擎（GitHub Gist / Gitee 代码片段） ---------- */
-const gist = {
-  _key: '_wb_gist_cfg',
-  _cfg: null,
-  _loadCfg(){
-    if(this._cfg) return this._cfg;
-    try { this._cfg = JSON.parse(localStorage.getItem(this._key)) || {}; } catch(e){ this._cfg = {}; }
-    return this._cfg;
-  },
-  _saveCfg(){ localStorage.setItem(this._key, JSON.stringify(this._cfg)); },
-  get platform(){ return this._loadCfg().platform || 'gitee'; },
-  set platform(v){ this._loadCfg().platform = v; this._saveCfg(); },
-  get token(){ return this._loadCfg().token || ''; },
-  set token(v){ this._loadCfg().token = v; this._saveCfg(); },
-  get gistId(){ return this._loadCfg().gistId || ''; },
-  set gistId(v){ this._loadCfg().gistId = v; this._saveCfg(); },
-  get ready(){ return !!(this.token && this.gistId); },
-  get status(){ return this._loadCfg().status || 'off'; },
-  set status(v){ this._loadCfg().status = v; this._saveCfg(); },
-
-  isGH(){ return this.platform === 'github'; },
-  baseURL(){ return this.isGH() ? 'https://api.github.com' : 'https://gitee.com/api/v5'; },
-
-  async create(){
-    const gh = this.isGH();
-    const url = `${this.baseURL()}/gists`;
-    const body = {
-      description: 'workbench-sync-data',
-      public: false,
-      files: { 'workbench-data.json': { content: JSON.stringify(data) } }
-    };
-    if(!gh) body.access_token = this.token;
-    const headers = gh ? { 'Authorization': `token ${this.token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
-    const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
-    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e.message||`创建失败 (${resp.status})`); }
-    const j = await resp.json();
-    this.gistId = ''+j.id;
-    this.status = 'synced';
-    return this.gistId;
-  },
-
-  async pull(){
-    if(!this.ready) return null;
-    const gh = this.isGH();
-    let url = `${this.baseURL()}/gists/${this.gistId}`;
-    if(!gh) url += '?access_token=' + encodeURIComponent(this.token);
-    const headers = gh ? { 'Authorization': `token ${this.token}` } : {};
-    const resp = await fetch(url, { headers });
-    if(resp.status === 404){ this.gistId = ''; this.status = 'off'; return null; }
-    if(!resp.ok) throw new Error(`拉取失败 (${resp.status})`);
-    const j = await resp.json();
-    const f = j.files && j.files['workbench-data.json'];
-    return f && f.content ? JSON.parse(f.content) : null;
-  },
-
-  async push(){
-    if(!this.ready) return;
-    const gh = this.isGH();
-    const url = `${this.baseURL()}/gists/${this.gistId}`;
-    const body = { files: { 'workbench-data.json': { content: JSON.stringify(data) } } };
-    if(!gh) body.access_token = this.token;
-    const headers = gh ? { 'Authorization': `token ${this.token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
-    const resp = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(body) });
-    if(!resp.ok) throw new Error(`推送失败 (${resp.status})`);
-    this.status = 'synced';
-  }
-};
-
-function renderSyncStatus(){
-  const el = $('#sync-dot'); if(!el) return;
-  const s = gist.status;
-  el.className = 'sync-dot sync-' + s;
-  el.title = {off:'未连接', synced:'已同步', syncing:'同步中…', error:'同步失败'}[s] || '';
-  const lb = $('#sync-label'); if(lb) lb.textContent = {off:'仅本机', synced:'云同步', syncing:'同步中…', error:'同步失败'}[s] || '仅本机';
-}
 let data = store.load();
-let view = "home";            // home | insight | <moduleKey>
+let view = "home";
 let evCalMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let evCalSelected = isoToday();
-function persist(){ store.save(); store.sync(); render(); }
+function persist(){ store.save(); syncSave(); render(); }
 function pad2(n){ return String(n).padStart(2,"0"); }
 function toast(msg, type=""){
   let wrap=document.querySelector(".toast-wrap");
@@ -1050,7 +1158,7 @@ function wireHome(){
       if(!v) v='它们生也快乐，死也快乐，杯子里总有酒喝。';
       gs.textContent=v;
       data.__greet=v;
-      store.save();
+      store.save(); syncSave();
       toast("问候语已更新","success");
     });
     gs.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); gs.blur(); } });
@@ -1358,36 +1466,16 @@ function recHTML(m,x){
   const del=`<button class="del js-del" data-id="${x.id}" title="删除">${icon("trash",16)}</button>`;
   const acts=`<div class="acts">${pin}${del}</div>`;
   const chkMark=icon("check",14,2.4);
-  const thumb=x.image?`<img class="thumb" src="${attr(x.image)}" alt="">`:'';
   const customMeta=(m.fields||[]).filter(f=>x[f.key]).map(f=>`<span class="meta-tag">${esc(x[f.key])}</span>`).join("");
   const customBlock=customMeta?`<div class="meta-line">${customMeta}</div>`:'';
   const layout=x.layout||'default';
-  const layoutCls=`rec-layout-${layout}`;
+  const layoutCls=`rec-layout-default`;
 
-  // feature layout: 大图在上 + 标题 + 正文 (适合有图记录)
-  if(layout==='feature' && x.image){
-    const body=(x.content||x.note||'').trim();
-    return `<div class="rec ${layoutCls}">${acts}<div class="top" data-edit="${x.id}" style="flex-direction:column">
-      ${thumb}
-      <div class="feat-title">${esc(x.title||'无标题')}</div>
-      ${body?`<div class="feat-body">${esc(body)}</div>`:''}
-      ${customBlock?`<div style="padding:0 12px 12px">${customBlock}</div>`:''}</div></div>`;
-  }
-  // quote layout: 大字居中 (适合短文本/灵感/金句)
-  if(layout==='quote'){
-    const text=(x.content||x.title||'').trim();
-    return `<div class="rec ${layoutCls}">${acts}<div class="top" data-edit="${x.id}" style="flex-direction:column;align-items:center;text-align:center">
-      <div class="quote-text">${esc(text)}</div>
-      ${x.mood?`<div class="quote-meta">${esc(x.mood)}${x.date?` · ${esc(x.date)}`:''}</div>`:(x.date?`<div class="quote-meta">${esc(x.date)}</div>`:'')}
-      ${customBlock?`<div style="margin-top:8px">${customBlock}</div>`:''}</div></div>`;
-  }
-
-  // default layout (原有逻辑)
+  // default layout
   if(m.type==="todo"){
     const p=(m.priorities||[]).find(p=>p.key===x.priority);
     return `<div class="rec ${layoutCls}">${acts}<div class="top">
       <div class="chk js-chk ${x.done?'on':''}" data-id="${x.id}">${chkMark}</div>
-      ${thumb}
       <div class="body" data-edit="${x.id}"><div class="rname ${x.done?'done':''}">${esc(x.title)}</div>
       <div class="rmeta">${p?`<span class="badge" style="background:${p.color};color:${p.text}"><span class="dot"></span>${p.label}</span>`:''}</div>
       ${x.note?`<div class="rnote">${esc(x.note)}</div>`:''}${customBlock}</div></div></div>`;
@@ -1396,13 +1484,12 @@ function recHTML(m,x){
     const on=!!(x.log&&x.log[today()]); const st=streak(x.log);
     return `<div class="rec ${layoutCls}">${acts}<div class="top">
       <div class="chk js-chk ${on?'on':''}" data-id="${x.id}">${chkMark}</div>
-      ${thumb}
       <div class="body" data-edit="${x.id}"><div class="rname">${esc(x.title)}</div>
       <div class="rmeta"><span class="streak">${icon("flame",13)} 连续 ${st} 天</span>${on?'<span class="badge" style="background:var(--accent-muted);color:var(--accent)">今日已打卡</span>':''}</div>${customBlock}</div></div></div>`;
   }
   if(m.type==="progress"){
     const pct=Math.min(100,Math.round((x.current/x.target)*100||0));
-    return `<div class="rec ${layoutCls}">${acts}<div class="top">${thumb}<div class="body" data-edit="${x.id}">
+    return `<div class="rec ${layoutCls}">${acts}<div class="top"><div class="body" data-edit="${x.id}">
       <div class="rname">${esc(x.title)}</div>
       <div class="rmeta"><span style="color:var(--text-secondary);font-size:13px">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%</span></div>
       <div class="pbar"><i style="width:${pct}%;background:${m.color}"></i></div>
@@ -1410,13 +1497,13 @@ function recHTML(m,x){
   }
   if(m.type==="finance"){
     const inc=x.type==="income";
-    return `<div class="rec ${layoutCls}">${acts}<div class="top">${thumb}<div class="body" data-edit="${x.id}">
+    return `<div class="rec ${layoutCls}">${acts}<div class="top"><div class="body" data-edit="${x.id}">
       <div class="rname">${esc(x.title)}</div>
       <div class="rmeta"><span class="badge" style="background:var(--surface-nested);color:var(--text-secondary)">${esc(x.category||'其他')}</span><span style="color:var(--text-secondary);font-size:12px">${x.date||''}</span></div>${customBlock}</div>
       <div class="amt ${inc?'inc':'exp'}" style="margin-left:auto">${inc?'+':'-'}¥${x.amount}</div></div></div>`;
   }
   // note
-  return `<div class="rec ${layoutCls}">${acts}<div class="top">${thumb}<div class="body" data-edit="${x.id}">
+  return `<div class="rec ${layoutCls}">${acts}<div class="top"><div class="body" data-edit="${x.id}">
     <div class="rname">${esc(x.title||'无标题')}</div>
     <div class="rmeta">${x.mood?`<span class="badge" style="background:var(--accent-muted);color:var(--accent)">${esc(x.mood)}</span>`:''}<span style="color:var(--text-secondary);font-size:12px">${x.date||''}</span></div>
     ${x.content?`<div class="rnote">${esc(x.content)}</div>`:''}${customBlock}</div></div></div>`;
@@ -1476,9 +1563,8 @@ function openEditor(key, item){
       <div class="field"><label>日期</label><input id="f-date" type="date" value="${d.date||isoToday()}"/></div>`;
   }
 
-  // layout variant selector (finance 只用标准)
-  const layoutOpts=m.type==="finance"?[{v:'default',l:'标准'}]:[{v:'default',l:'标准'},{v:'feature',l:'大图'},{v:'quote',l:'引文'}];
-  fields=`<div class="field"><label>卡片样式</label><div class="seg" id="f-layout">${layoutOpts.map(o=>`<div class="opt ${o.v===(d.layout||'default')?'on':''}" data-v="${o.v}">${o.l}</div>`).join("")}</div></div>`+fields;
+  // 标准卡片样式
+  fields=`<div class="field"><label>卡片样式</label><div class="seg" id="f-layout"><div class="opt on" data-v="default">标准</div></div></div>`+fields;
 
   // custom fields (from m.fields config) — rendered after type-specific fields
   (m.fields||[]).forEach(f=>{
@@ -1488,9 +1574,6 @@ function openEditor(key, item){
     else if(f.type==="number") fields+=`<div class="field"><label>${esc(f.label)}</label><input id="f-cf-${f.key}" type="number" value="${attr(v)}" placeholder="${attr(f.placeholder||'')}"/></div>`;
     else fields+=`<div class="field"><label>${esc(f.label)}</label><input id="f-cf-${f.key}" value="${attr(v)}" placeholder="${attr(f.placeholder||'')}"/></div>`;
   });
-  // shared image URL field (all types)
-  fields+=`<div class="field"><label>图片 URL（可选）</label><input id="f-image" value="${attr(d.image||'')}" placeholder="https://..."/></div>`;
-
   const overlay=document.createElement("div"); overlay.className="overlay";
   overlay.innerHTML=`<div class="modal"><div class="grab"></div>
     <h2>${editing?'编辑':'新建'} · ${m.name}</h2><div class="sub">${m.desc}</div>
@@ -1521,8 +1604,6 @@ function openEditor(key, item){
       else if(f.type==="number") d[f.key]=Math.max(0,+val("#f-cf-"+f.key)||0);
       else d[f.key]=(val("#f-cf-"+f.key)||"").trim();
     });
-    // save image
-    d.image=(val("#f-image")||"").trim();
     if(!editing) (data[key]=data[key]||[]).unshift(d);
     persist(); close();
   };
@@ -1637,22 +1718,6 @@ $("#avatarInput").onchange = e => {
   e.target.value = "";
 };
 
-/* ---------- sync upload / download ---------- */
-$("#btn-sync-upload").onclick = async () => {
-  if(!gist.ready){ toast("请先设置 GitHub 同步","danger"); openSyncSetup(); return; }
-  try {
-    gist.status = 'syncing'; renderSyncStatus();
-    await gist.push();
-    toast("数据已上传到 GitHub","success");
-  } catch(e){ gist.status = 'error'; renderSyncStatus(); toast(e.message,"danger"); }
-};
-$("#btn-sync-download").onclick = async () => {
-  if(!gist.ready){ toast("请先设置 GitHub 同步","danger"); openSyncSetup(); return; }
-  const ok = await store.pullFromGist();
-  if(ok){ render(); toast("数据已从 GitHub 下载","success"); }
-  else toast("下载失败，请检查设置","danger");
-};
-
 /* ---------- export / import backup ---------- */
 $("#btn-export").onclick = () => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -1676,7 +1741,7 @@ $("#importInput").onchange = e => {
       if(typeof parsed !== "object" || parsed === null) throw new Error("invalid");
       data = parsed;
       CONFIG.modules.forEach(m => { if(!data[m.key]) data[m.key] = structuredClone(m.seed||[]); });
-      store.save();
+      store.save(); syncSave();
       applyAvatar();
       render();
       toast("备份已导入","success");
@@ -1690,117 +1755,151 @@ $("#importInput").onchange = e => {
 function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function attr(s){ return esc(s).replace(/"/g,'&quot;'); }
 
-/* ---------- 同步设置弹窗 ---------- */
-function openSyncSetup(){
-  const tok = gist.token;
-  const gid = gist.gistId;
-  const pf = gist.platform;
-  const isGH = pf === 'github';
-  const platformLabel = isGH ? 'GitHub' : 'Gitee';
-  const ghSel = isGH ? 'on' : '';
-  const giSel = isGH ? '' : 'on';
-  const tokenPlaceholder = isGH ? 'ghp_xxxxxxxxxxxx' : '在 Gitee 设置 > 私人令牌 中生成';
-  const tokenLabel = isGH ? 'GitHub Token' : 'Gitee 私人令牌';
-  const idLabel = isGH ? 'Gist ID' : '片段 ID';
+/* ---------- 登录 / 注册弹窗 ---------- */
+function openAuthModal(tab){
   const overlay = document.createElement("div"); overlay.className = "overlay";
   overlay.style.alignItems = "center";
-  overlay.innerHTML = `<div class="modal"><h3>${icon("cloud",20)} 同步设置</h3>
-    <div class="sub">选择平台后配置 Token 即可实现多设备数据互通</div>
-    <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
-      <div><label style="font-size:12px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">同步平台</label>
-        <div class="seg" id="sync-platform">
-          <div class="opt ${ghSel}" data-v="github">GitHub</div>
-          <div class="opt ${giSel}" data-v="gitee">Gitee 码云</div>
-        </div></div>
-      <div><label style="font-size:12px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">${tokenLabel}</label>
-        <input id="sync-token" type="password" value="${esc(tok)}" placeholder="${tokenPlaceholder}" style="width:100%;padding:10px 12px;border:1px solid var(--border-input);border-radius:var(--radius-tile);background:var(--surface-nested);color:var(--text);font-size:13px;font-family:var(--mono)"/></div>
-      <div><label style="font-size:12px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">${idLabel} ${gid ? '<span style="color:var(--module-4);font-weight:400">(已连接)</span>' : ''}</label>
-        <input id="sync-gist-id" value="${esc(gid)}" placeholder="首次连接将自动创建" readonly style="width:100%;padding:10px 12px;border:1px solid var(--border-input);border-radius:var(--radius-tile);background:${gid?'var(--surface-nested)':'var(--surface-card)'};color:var(--text);font-size:13px;opacity:${gid?'1':'.5'}"/></div>
-      <div style="font-size:11px;color:var(--text-tertiary);line-height:1.5;">Token 仅存在本机浏览器中。${isGH?'需勾选 <b>gist</b> 权限。':'Gitee Token 在 <a href=\"https://gitee.com/profile/personal_access_tokens\" target=\"_blank\" style=\"color:var(--accent)\">gitee.com/profile/personal_access_tokens</a> 创建。'}</div>
+  overlay.innerHTML = `<div class="modal auth-modal"><h3>${icon("bolt",20)} 登录数据同步</h3>
+    <div class="sub">登录后数据自动同步到云端，多设备无缝切换</div>
+    <div class="tab-row" id="auth-tabs">
+      <div class="tab ${tab==='login'?'on':''}" data-t="login">登录</div>
+      <div class="tab ${tab==='register'?'on':''}" data-t="register">注册</div>
     </div>
+    <div class="field"><label>邮箱</label><input id="auth-email" type="email" placeholder="your@email.com" autocomplete="email"/></div>
+    <div class="field"><label>密码</label><input id="auth-pwd" type="password" placeholder="至少 6 位" autocomplete="current-password"/></div>
     <div class="modal-actions">
-      ${gid ? '<button class="link-danger" id="sync-disconnect">断开同步</button>' : ''}
+      <button class="link-danger" id="auth-logout" style="display:none">退出登录</button>
       <div class="spacer"></div>
-      <button class="btn ghost" id="sync-cancel">取消</button>
-      ${gid ? '<button class="btn ghost" id="sync-pull">拉取云端</button>' : ''}
-      <button class="btn" id="sync-save">${gid ? '保存' : '连接并同步'}</button>
+      <button class="btn ghost" id="auth-cancel">取消</button>
+      <button class="btn" id="auth-submit">${tab==='register'?'注册':'登录'}</button>
     </div></div>`;
   document.body.appendChild(overlay);
   const close = () => overlay.remove();
   overlay.onclick = e => { if(e.target === overlay) close(); };
-  overlay.querySelector("#sync-cancel").onclick = close;
+  overlay.querySelector("#auth-cancel").onclick = close;
 
-  // 平台切换
-  const seg = overlay.querySelector("#sync-platform");
-  seg.querySelectorAll(".opt").forEach(o => o.onclick = () => {
-    seg.querySelectorAll(".opt").forEach(x => x.classList.remove("on")); o.classList.add("on");
-    const np = o.dataset.v;
-    if(np !== gist.platform && gid) {
-      // 切换平台会重置连接
-      gist.platform = np; gist.token = ''; gist.gistId = ''; gist.status = 'off';
-      renderSyncStatus(); close();
-      toast("已切换到 " + (np==='github'?'GitHub':'Gitee') + "，请重新配置","");
-      openSyncSetup();
-      return;
-    }
-    gist.platform = np;
-    const isGH2 = np === 'github';
-    overlay.querySelector("#sync-token").placeholder = isGH2 ? 'ghp_xxxxxxxxxxxx' : '在 Gitee 设置 > 私人令牌 中生成';
-    overlay.querySelector("#sync-token").previousElementSibling.textContent = isGH2 ? 'GitHub Token' : 'Gitee 私人令牌';
-    overlay.querySelector("#sync-gist-id").previousElementSibling.firstChild.textContent = (isGH2 ? 'Gist ID' : '片段 ID') + ' ';
-    const hint = overlay.querySelector("#sync-token").closest("div").parentElement.nextElementSibling || overlay.querySelector("div[style*='font-size:11px']");
-    if(hint) hint.innerHTML = `Token 仅存在本机浏览器中。${isGH2?'需勾选 <b>gist</b> 权限。':'Gitee Token 在 <a href=\\"https://gitee.com/profile/personal_access_tokens\\" target=\\"_blank\\" style=\\"color:var(--accent)\\">gitee.com/profile/personal_access_tokens</a> 创建。'}`;
+  if(supabaseUser){
+    overlay.querySelector("#auth-logout").style.display = '';
+    overlay.querySelector("#auth-email").value = supabaseUser.email || '';
+    overlay.querySelector("#auth-email").disabled = true;
+    overlay.querySelector("#auth-pwd").disabled = true;
+    overlay.querySelector("#auth-submit").style.display = 'none';
+  }
+
+  const tabs = overlay.querySelector("#auth-tabs");
+  let mode = tab;
+  tabs.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+    tabs.querySelectorAll(".tab").forEach(x => x.classList.remove("on")); t.classList.add("on");
+    mode = t.dataset.t;
+    overlay.querySelector("#auth-submit").textContent = mode === 'register' ? '注册' : '登录';
   });
 
-  overlay.querySelector("#sync-save").onclick = async () => {
-    const nt = overlay.querySelector("#sync-token").value.trim();
-    if(!nt){ toast("请输入 Token","danger"); return; }
-    gist.token = nt; gist.platform = seg.querySelector(".on").dataset.v;
-    const curId = gist.gistId;
-    if(!curId){
-      try {
-        toast("正在创建…","");
-        await gist.create();
-        renderSyncStatus();
-        toast("同步已连接！","success");
-        close();
-      } catch(e){ toast(e.message,"danger"); }
-    } else {
-      gist.gistId = overlay.querySelector("#sync-gist-id").value.trim();
-      renderSyncStatus();
-      toast("设置已保存","success");
-      close();
-    }
+  overlay.querySelector("#auth-logout").onclick = async () => {
+    await supabase.auth.signOut();
+    toast("已退出登录","");
+    close();
   };
 
-  if(gid){
-    overlay.querySelector("#sync-pull").onclick = async () => {
-      toast("正在拉取…","");
-      const ok = await store.pullFromGist();
-      if(ok){ render(); toast("数据已从云端拉取","success"); }
-      else toast("拉取失败","danger");
-      close();
-    };
-    overlay.querySelector("#sync-disconnect").onclick = () => {
-      gist.token = ''; gist.gistId = ''; gist.status = 'off';
-      renderSyncStatus();
-      toast("同步已断开","danger");
-      close();
-    };
+  overlay.querySelector("#auth-submit").onclick = async function handler(){
+    if(!supabase){ toast("云服务未连接，请检查网络后刷新重试","danger"); return; }
+    const email = overlay.querySelector("#auth-email").value.trim();
+    const pwd = overlay.querySelector("#auth-pwd").value;
+    if(!email || !pwd){ toast("请填写邮箱和密码","danger"); return; }
+    if(pwd.length < 6){ toast("密码至少 6 位","danger"); return; }
+    const btn = overlay.querySelector("#auth-submit");
+    btn.disabled = true; btn.textContent = '处理中…'; btn.style.opacity = '.6';
+    try {
+      let result;
+      if(mode === 'register'){
+        result = await supabase.auth.signUp({ email, password: pwd });
+        if(result.error) throw result.error;
+        if(result.data.user && !result.data.session){
+          toast("注册成功，请查收验证邮件后登录","success"); close(); return;
+        }
+      } else {
+        result = await supabase.auth.signInWithPassword({ email, password: pwd });
+        if(result.error) throw result.error;
+      }
+      if(result.data.session){
+        toast("登录成功","success"); close();
+      }
+    } catch(e){
+      const msg = (e.message || e.msg || "操作失败").toLowerCase();
+      if(msg.includes('user already registered') || msg.includes('already been registered') || msg.includes('already exists')) toast("该邮箱已注册，请直接登录","danger");
+      else if(msg.includes('invalid login') || msg.includes('invalid credentials')) toast("邮箱或密码错误","danger");
+      else toast(e.message || e.msg || "操作失败","danger");
+      btn.disabled = false; btn.textContent = mode==='register'?'注册':'登录'; btn.style.opacity = '';
+    }
+  };
+}
+
+function renderAuthState(){
+  const bar = $('#authBar');
+  const btn = $('#btn-login');
+  if(supabaseUser){
+    if(bar){ bar.style.display = 'flex'; bar.onclick = () => openAuthModal('login'); }
+    if(btn){ btn.style.display = 'none'; }
+    const av = $('#authAvatar');
+    const ae = $('#authEmail');
+    if(av){ av.textContent = (supabaseUser.email||'?')[0].toUpperCase(); }
+    if(ae){ ae.textContent = supabaseUser.email || ''; }
+  } else {
+    if(bar){ bar.style.display = 'none'; }
+    if(btn){ btn.style.display = ''; btn.onclick = () => openAuthModal('login'); }
   }
 }
 
-$("#btn-sync-setup").onclick = openSyncSetup;
+async function startAuth(){
+  try {
+  // 监听登录状态变化
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    supabaseSession = session;
+    supabaseUser = session ? session.user : null;
+    renderAuthState();
 
-// 页面加载时自动从 Gist 拉取
-(async function initSync(){
-  if(gist.ready){
-    await store.pullFromGist();
-    if(gist.status === 'synced') render();
+    if(supabaseUser){
+      // 登录后从云端拉数据
+      const cloud = await syncLoad();
+      if(cloud && typeof cloud === 'object'){
+        data = cloud;
+        CONFIG.modules.forEach(m => { if(!data[m.key]) data[m.key] = structuredClone(m.seed||[]); });
+        store.save();
+        applyAvatar();
+      } else {
+        // 首次登录，把本地数据推到云端
+        await syncSave();
+      }
+      subscribeRealtime();
+      render();
+    } else {
+      // 退出后断开实时订阅
+      if(realtimeChannel){ supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+    }
+  });
+
+  // 检查是否已有会话（记住登录）
+  const { data: { session } } = await supabase.auth.getSession();
+  if(session){
+    supabaseSession = session;
+    supabaseUser = session.user;
+    renderAuthState();
+    const cloud = await syncLoad();
+    if(cloud && typeof cloud === 'object'){
+      data = cloud;
+      CONFIG.modules.forEach(m => { if(!data[m.key]) data[m.key] = structuredClone(m.seed||[]); });
+      store.save();
+      applyAvatar();
+    } else {
+      await syncSave();
+    }
+    subscribeRealtime();
+  } else {
+    renderAuthState();
   }
-  renderSyncStatus();
-})();
+  } catch(e){ renderAuthState(); console.warn('Auth init failed:', e.message || e); }
+}
 
+startAuth();
 buildDrawer();
 render();
 </script>
