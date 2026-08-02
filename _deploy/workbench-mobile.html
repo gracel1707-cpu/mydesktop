@@ -971,9 +971,9 @@ function renderHome(){
   const quick = CONFIG.quickAdd.map(q=>`<button class="qbtn" data-quick="${q.module}" data-action="${q.action||'quick'}"><span class="e" style="background:${q.tint};color:${q.color}">${icon(q.icon,20)}${q.action==='go'?'':`<i class="qplus">${icon("plus",10,3)}</i>`}</span><span class="l">${q.label}</span></button>`).join("");
 
   // upcoming events (next 5, starting from today)
-  const allEvents = getEvents().sort((a,b)=>a.start.localeCompare(b.start));
-  const now = isoToday();
-  const upcoming = allEvents.filter(e=>e.end.slice(0,10)>=now).slice(0,5);
+   const allEvents = getEvents().sort((a,b)=>a.start.localeCompare(b.start));
+   const todayIso = isoToday();
+   const upcoming = allEvents.filter(e=>e.end.slice(0,10)>=todayIso).slice(0,5);
   const evList = upcoming.length ? upcoming.map(ev=>{
     const t=evTypeOf(ev.type);
     return `<div class="cal-event" data-evid="${ev.id}"><span class="ev-bar" style="background:${t.color}"></span>
