@@ -261,7 +261,7 @@
   .scrim { position: fixed; inset: 0; background: color-mix(in srgb, var(--text) 42%, transparent); backdrop-filter: blur(2px); z-index: 40; opacity:0; pointer-events:none; transition: opacity .22s; }
   .scrim.show { opacity:1; pointer-events:auto; }
   .drawer { position: fixed; top:0; bottom:0; left:0; width: 296px; max-width: 82vw; z-index: 50; transform: translateX(-104%);
-    transition: transform .26s cubic-bezier(.2,.8,.25,1); overflow-y:auto;
+    transition: transform .26s cubic-bezier(.2,.8,.25,1); overflow-y:auto; padding-top: env(safe-area-inset-top, 0px);
     background: linear-gradient(180deg, var(--drawer-bg-top), var(--drawer-bg)); color:var(--drawer-text); }
   .drawer.show { transform: translateX(0); }
   .drawer .dh { padding: 26px 22px 18px; display:flex; align-items:center; gap: 12px; position: relative; }
@@ -394,9 +394,12 @@
   .cal-chip.on { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
   .cal-dow { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:12px; color:var(--text-tertiary); font-weight:600; margin-bottom:6px; }
   .cal-cell { aspect-ratio:1; border-radius:var(--radius-control); display:grid; place-items:center; font-size:12px; font-weight:600;
-    color:var(--text-secondary); background:var(--surface-nested); border:1px solid var(--border); cursor:pointer; transition:all .15s; font-family:var(--font); }
+    color:var(--text-secondary); background:var(--surface-nested); border:1px solid var(--border); cursor:pointer; transition:all .15s; font-family:var(--font); position:relative; }
   .cal-cell.blank { background:transparent; border:none; cursor:default; }
   .cal-cell.on { color:#fff; }
+  .cal-cell .cal-num { position:absolute; top:2px; left:4px; font-size:11px; font-weight:600; line-height:1; }
+  .cal-cell .cal-paw { display:grid; place-items:center; }
+  .cal-cell .cal-paw svg { width:15px; height:15px; }
   .cal-cell.today { box-shadow:inset 0 0 0 2px var(--accent); }
   .cal-cell:active { transform:scale(.92); }
 
@@ -712,10 +715,10 @@ const CONFIG = {
 
   // 快速记录按钮（点了直接给对应模块新建）
   quickAdd: [
-    { label: "记待办", icon: "list",   module: "todo",    tint: "rgba(77,217,255,.08)",  color: "var(--accent)" },
-    { label: "记打卡", icon: "paw",    module: "checkin", tint: "rgba(92,255,157,.08)",  color: "var(--module-4)" },
-    { label: "记一笔", icon: "wallet", module: "money",   tint: "rgba(255,92,138,.08)",  color: "var(--module-3)" },
-    { label: "记随笔", icon: "pen",    module: "note",    tint: "rgba(180,106,255,.08)", color: "var(--module-2)" },
+    { label: "记待办", icon: "list",   module: "todo",    tint: "rgba(77,217,255,.08)",  color: "var(--accent)", action:"quick" },
+    { label: "去打卡", icon: "paw",    module: "checkin", tint: "rgba(92,255,157,.08)",  color: "var(--module-4)", action:"go" },
+    { label: "记一笔", icon: "wallet", module: "money",   tint: "rgba(255,92,138,.08)",  color: "var(--module-3)", action:"quick" },
+    { label: "记随笔", icon: "pen",    module: "note",    tint: "rgba(180,106,255,.08)", color: "var(--module-2)", action:"quick" },
   ],
 
   // ============ 模块定义 ============
@@ -741,6 +744,20 @@ const CONFIG = {
         { id: 21, title: "今天开心了吗？", log: {} },
         { id: 22, title: "今天学习了吗？", log: {} },
         { id: 23, title: "今天运动了吗？", log: {} },
+      ],
+    },
+    {
+      key: "read", name: "在读好书", icon: "book", tint: "rgba(180,106,255,.08)", color: "var(--module-2)", type: "progress", unit: "页", desc: "书籍进度·摘录·想法",
+      seed: [
+        { id: 31, title: "《认知觉醒》", current: 168, target: 300, unit: "页", note: "第 7 章：习惯的复利，早晚各读 30 分钟" },
+        { id: 32, title: "《原子习惯》", current: 90, target: 260, unit: "页", note: "聚焦身份认同的养成，做好读书笔记" },
+      ],
+    },
+    {
+      key: "sport", name: "本周目标", icon: "target", tint: "rgba(255,180,84,.08)", color: "var(--module-5)", type: "progress", unit: "次", desc: "运动·锻炼·本周目标进度",
+      seed: [
+        { id: 41, title: "力量训练", current: 12, target: 20, unit: "分钟", note: "核心 + 上肢，组间休息 60 秒" },
+        { id: 42, title: "跑步", current: 30, target: 40, unit: "分钟", note: "慢跑热身，配速 6 分半保持心率" },
       ],
     },
     {
@@ -807,7 +824,7 @@ function icon(name, size=22, sw=1.7){
 /* ============================================================
    ENGINE — 一般无需改动
    ============================================================ */
-function isoToday(){ return new Date().toISOString().slice(0,10); }
+function isoToday(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function today(){ return isoToday(); }
 function avgProgress(list){
   if(!list||!list.length) return { value: 0, sub: "0" };
@@ -951,7 +968,26 @@ function renderHome(){
     return `<div class="${cls}" data-date="${c.date}"><span>${c.day}</span></div>`;
   }).join("");
 
-  const quick = CONFIG.quickAdd.map(q=>`<button class="qbtn" data-quick="${q.module}"><span class="e" style="background:${q.tint};color:${q.color}">${icon(q.icon,20)}<i class="qplus">${icon("plus",10,3)}</i></span><span class="l">${q.label}</span></button>`).join("");
+  const quick = CONFIG.quickAdd.map(q=>`<button class="qbtn" data-quick="${q.module}" data-action="${q.action||'quick'}"><span class="e" style="background:${q.tint};color:${q.color}">${icon(q.icon,20)}${q.action==='go'?'':`<i class="qplus">${icon("plus",10,3)}</i>`}</span><span class="l">${q.label}</span></button>`).join("");
+
+  // upcoming events (next 5, starting from today)
+  const allEvents = getEvents().sort((a,b)=>a.start.localeCompare(b.start));
+  const now = isoToday();
+  const upcoming = allEvents.filter(e=>e.end.slice(0,10)>=now).slice(0,5);
+  const evList = upcoming.length ? upcoming.map(ev=>{
+    const t=evTypeOf(ev.type);
+    return `<div class="cal-event" data-evid="${ev.id}"><span class="ev-bar" style="background:${t.color}"></span>
+      <div class="ev-info"><div class="ev-title">${esc(ev.title)}</div><div class="ev-time">${formatEventTime(ev)}</div></div></div>`;
+  }).join("") : `<div class="cal-empty-day">暂无行程，点击月历日期新建</div>`;
+
+  // 本周目标 (read + sport modules)
+  const goalItems = [...(data.read||[]).map(x=>({...x,_mod:"read"})), ...(data.sport||[]).map(x=>({...x,_mod:"sport"}))];
+  const goalList = goalItems.length ? goalItems.slice(0,3).map(x=>{
+    const m=modOf(x._mod); const pct=Math.round((x.current/x.target)*100||0);
+    return `<div class="pin" data-open="${x._mod}"><span class="pin-ic" style="color:${m.color}">${icon(m.icon,17)}</span>
+      <div class="pin-b"><div class="pin-t">${esc(x.title)}</div><div class="pin-m">${x.current}/${x.target} ${x.unit||m.unit||''} · ${pct}%</div></div>
+      <span class="arw">${icon("chevron",14,2)}</span></div>`;
+  }).join("") : `<div class="pin-empty">去「在读好书」和「本周目标」设置你的计划</div>`;
 
   $("#screen").innerHTML = `
     <div class="greet"><div><h1>${hi}，${data.__owner || CONFIG.owner}</h1><p id="greetSub" contenteditable="true" spellcheck="false" title="点击可编辑">${esc(data.__greet || '它们生也快乐，死也快乐，杯子里总有酒喝。')}</p></div></div>
@@ -961,12 +997,16 @@ function renderHome(){
     <div class="pin-list">${pinned}</div>
     <div class="sec-title">快速记录</div>
     <div class="quick-grid">${quick}</div>
+    <div class="sec-title">行程计划</div>
     <div class="panel cal-panel"><div class="ph">${icon("calendar",15)} ${monthNames[cm]} ${cy}<span class="avg">${monthEvents.length} 项</span></div>
       <div class="cal-dow-row">${dows.map(d=>`<span class="${d==='六'||d==='日'?'wk':''}">${d}</span>`).join("")}</div>
       <div class="cal-grid">${calGrid}</div>
       <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>混合</span></div>
-    </div>`;
-
+    </div>
+    <div class="sec-title">近期日程</div>
+    <div class="cal-events">${evList}</div>
+    <div class="sec-title">本周目标</div>
+    <div class="pin-list">${goalList}</div>`;
   wireHome();
 }
 
@@ -1076,7 +1116,7 @@ function renderCalendar(m, it){
   for(let d=1;d<=days;d++){
     const ds=`${y}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const on=!!log[ds]; if(on) monthCount++;
-    cells+=`<button type="button" class="cal-cell ${on?'on':''} ${ds===todayIso?'today':''}" data-date="${ds}"${on?` style="background:${m.color};border-color:${m.color}"`:''}>${d}</button>`;
+    cells+=`<button type="button" class="cal-cell ${on?'on':''} ${ds===todayIso?'today':''}" data-date="${ds}"${on?` style="background:${m.color};border-color:${m.color}"`:''}><span class="cal-num">${d}</span>${on?`<span class="cal-paw">${icon("paw",14,2)}</span>`:''}</button>`;
   }
   return `<div class="panel cal-panel">
     <div class="cal-hd"><button class="cal-nav" data-cal="prev" aria-label="上月">${icon("chevron",16,2)}</button>
@@ -1136,7 +1176,10 @@ function confirmCalUncheck(item, ds){
 
 function wireHome(){
   $("#screen").querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>go(el.dataset.open));
-  $("#screen").querySelectorAll("[data-quick]").forEach(el=>el.onclick=()=>{ go(el.dataset.quick); openEditor(el.dataset.quick,null); });
+  $("#screen").querySelectorAll("[data-quick]").forEach(el=>el.onclick=()=>{
+    if(el.dataset.action==="go"){ go(el.dataset.quick); }
+    else { go(el.dataset.quick); openEditor(el.dataset.quick,null); }
+  });
   const find=el=>(data[el.dataset.mkey]||[]).find(i=>i.id==el.dataset.id);
   // 置顶卡：就地打卡 / 完成
   $("#screen").querySelectorAll(".js-pin-chk").forEach(el=>el.onclick=e=>{
@@ -1232,6 +1275,8 @@ function showDayEvents(dateStr){
 
 /* ---------- INSIGHT ---------- */
 function renderInsight(){
+  // auto-update selected date if it's stale
+  if(evCalSelected < isoToday()) evCalSelected = isoToday();
   // 模块完成度柱状条
   const DONUT_COLORS=["var(--module-4)","var(--module-3)","var(--module-5)","var(--module-2)","var(--module-1)","var(--danger)","var(--text-tertiary)"];
   const bars = CONFIG.modules.map(m=>{
@@ -1279,13 +1324,15 @@ function renderInsight(){
     const cls=`cal-day ${c.other?'other':''} ${c.date===todayStr?'today':''} ${evtCls}`;
     return `<div class="${cls}" data-date="${c.date}"><span>${c.day}</span></div>`;
   }).join("");
-  const selEvents=eventsOnDay(evCalSelected);
-  const evList=selEvents.length ? selEvents.sort((a,b)=>a.start.localeCompare(b.start)).map(ev=>{
+  // upcoming events (next 5)
+  const allEvs = getEvents().sort((a,b)=>a.start.localeCompare(b.start));
+  const upcomingEvs = allEvs.filter(e=>e.end.slice(0,10)>=isoToday()).slice(0,5);
+  const evList=upcomingEvs.length ? upcomingEvs.map(ev=>{
     const t=evTypeOf(ev.type);
     return `<div class="cal-event" data-evid="${ev.id}"><span class="ev-bar" style="background:${t.color}"></span>
       <div class="ev-info"><div class="ev-title">${esc(ev.title)}</div><div class="ev-time">${formatEventTime(ev)}</div></div>
       <button class="ev-del">${icon("paw-off",14)}删除日程</button></div>`;
-  }).join("") : `<div class="cal-empty-day">${evCalSelected} 没有日程</div>`;
+  }).join("") : `<div class="cal-empty-day">暂无近期日程</div>`;
 
   $("#screen").innerHTML = `<div class="greet"><div><h1>行程统计</h1><p>各模块进展 · 日程管理 · 统计反馈</p></div></div>
     <div class="sec-title">模块完成度</div>
@@ -1304,7 +1351,7 @@ function renderInsight(){
       <div class="cal-grid">${calGrid}</div>
       <div class="cal-legend">${EVENT_TYPES.map(t=>`<span><i style="background:${t.color}"></i>${t.label}</span>`).join("")}<span><i style="background:var(--module-2)"></i>混合</span></div>
     </div>
-    <div class="sec-title">${evCalSelected} 的日程</div>
+    <div class="sec-title">近期日程</div>
     <div class="cal-events">${evList}</div>
     <div class="sec-title">支出构成</div>
     <div class="panel"><div class="ph">${icon("wallet",15)} 支出构成<span class="avg">合计 ¥${totalExp}</span></div>
@@ -1447,8 +1494,9 @@ function renderModule(key){
     : `<div class="empty"><span class="e">${icon(m.icon,26)}</span><div>还没有记录，点上方「新建」添加第一条吧</div></div>`;
   $("#screen").innerHTML = `<div class="greet"><div><h1>${m.name}</h1><p>${m.desc}</p></div>
       <button class="add" id="btn-add">${icon("plus",16,2.2)}新建</button></div>
-    <div style="margin-top:16px">${head}${extra}
-      <div class="sec-title">记录</div>${body}</div>`;
+    <div style="margin-top:16px">${head}
+      <div class="sec-title">记录</div>${body}
+      ${extra}</div>`;
   wireModule(key);
 }
 
