@@ -92,7 +92,7 @@
   body::after { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background: repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(0,0,0,.13) 3px, transparent 4px);
     opacity:.45; }
-  .app { padding: 0 16px calc(var(--nav-h) + 26px); }
+  .app { padding: env(safe-area-inset-top, 0px) 16px calc(var(--nav-h) + 26px); }
   svg { display: block; }
 
   /* ---------- top bar ---------- */
@@ -471,7 +471,7 @@
     <button class="dclose" id="drawerClose"></button>
     <div class="brand" id="drawerBrand" title="点击更换头像"><img src="" alt="头像" id="brandImg" style="display:none"/><span class="brand-cam" id="brandCam"></span></div>
     <input type="file" id="avatarInput" accept="image/*" hidden/>
-    <div><h2 id="drawerName">我的工作台</h2><p id="drawerSlogan">Personal Workbench</p></div>
+    <div><h2 id="drawerName" contenteditable="true" spellcheck="false" title="点击可编辑名称">我的工作台</h2><p id="drawerSlogan">Personal Workbench</p></div>
   </div>
   <div class="dsep"></div>
   <div id="drawerList"></div>
@@ -1654,8 +1654,14 @@ function render(){
 
 /* ---------- drawer ---------- */
 function buildDrawer(){
-  $("#drawerName").textContent=CONFIG.owner;
+  $("#drawerName").textContent = data.__owner || CONFIG.owner;
   $("#drawerSlogan").textContent=CONFIG.slogan;
+  $("#drawerName").addEventListener("blur", ()=>{
+    let v = $("#drawerName").textContent.trim();
+    if(!v) v = CONFIG.owner;
+    data.__owner = v; store.save();
+  });
+  $("#drawerName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#drawerName").blur(); } });
   const items=[`<div class="ditem" data-go="home">${icon("home",20)}首页</div>`]
     .concat(CONFIG.modules.map(m=>`<div class="ditem" data-go="${m.key}">${icon(m.icon,20)}${m.name}</div>`))
     .concat([`<div class="ditem" data-go="insight">${icon("chart",20)}行程统计</div>`]);
