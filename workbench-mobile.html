@@ -135,13 +135,13 @@
 
   /* ---------- overview rings ---------- */
   .rings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 20px 6px; margin-top: 14px; }
-  .ring { display:flex; flex-direction:column; align-items:center; gap: 8px; }
+  .ring { display:flex; flex-direction:column; align-items:center; gap: 4px; }
   .ring .dial { position: relative; width: 68px; height: 68px; }
   .ring .dial svg.gauge { transform: rotate(-90deg); width: 68px; height: 68px; }
   .ring .dial .mid { position:absolute; inset:0; display:grid; place-items:center; }
   .ring .pct { font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
   .ring .lbl { font-size: 12px; color: var(--text); font-weight: 600; }
-  .ring .sub { font-size: 11px; color: var(--text-secondary); }
+  .ring .sub { font-size: 11px; color: var(--text-secondary); margin-top: -2px; }
 
   /* ---------- trend + quick record ---------- */
   .panel { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 14px; }
@@ -252,10 +252,13 @@
 
   /* ---------- bottom nav ---------- */
   .nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; height: var(--nav-h);
-    background: rgba(252,251,248,.92); backdrop-filter: blur(14px); border-top: 1px solid var(--border);
-    display: grid; grid-template-columns: repeat(3,1fr); align-items: center; z-index: 30; padding-bottom: env(safe-area-inset-bottom); }
-  .nav .n { display:flex; flex-direction:column; align-items:center; gap: 4px; cursor:pointer; color: var(--text-tertiary); font-size: 10px; font-weight: 500; }
-  .nav .n.active { color: var(--accent); font-weight: 700; }
+    background: linear-gradient(135deg, #d4a574, #c49464); backdrop-filter: blur(14px); border-top: none;
+    display: grid; grid-template-columns: repeat(3,1fr); align-items: center; z-index: 30; padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 20px rgba(180,130,80,.25); }
+  .nav .n { display:flex; flex-direction:column; align-items:center; gap: 4px; cursor:pointer; color: rgba(255,255,255,.72); font-size: 10px; font-weight: 500; }
+  .nav .n.active { color: #fff; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  .nav .n svg { color: rgba(255,255,255,.72); }
+  .nav .n.active svg { color: #fff; }
 
   /* ---------- drawer ---------- */
   .scrim { position: fixed; inset: 0; background: color-mix(in srgb, var(--text) 42%, transparent); backdrop-filter: blur(2px); z-index: 40; opacity:0; pointer-events:none; transition: opacity .22s; }
@@ -336,9 +339,9 @@
   .bar-row { display:flex; align-items:center; gap:10px; }
   .bar-ic { width:30px; height:30px; border-radius:var(--radius-tile); display:grid; place-items:center; flex:0 0 auto;
     background:var(--surface-nested); border:1px solid var(--border); }
-  .bar-name { font-size:13px; font-weight:600; width:64px; flex:0 0 auto; color:var(--text); }
+  .bar-name { font-size:13px; font-weight:600; width:64px; flex:0 0 auto; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .bar-row .pbar { flex:1; margin:0; height:7px; }
-  .bar-pct { font-size:12px; font-weight:600; color:var(--text-secondary); width:54px; text-align:right; flex:0 0 auto; }
+  .bar-pct { font-size:11px; font-weight:600; color:var(--text-secondary); min-width:80px; text-align:right; flex:0 0 auto; white-space:nowrap; }
 
   .donut-wrap { display:flex; gap:18px; align-items:center; margin-top:14px; }
   .donut { position:relative; width:104px; height:104px; flex:0 0 auto; }
@@ -883,6 +886,7 @@ const MAX_PIN = 4;
 let view = "home";
 let evCalMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let evCalSelected = isoToday();
+let moneyCalMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 function persist(){ store.save(); syncSave(); render(); }
 function tryPin(x){
   if(x.pinned) return true; // unpinning is always allowed
@@ -943,8 +947,8 @@ function renderHome(){
   // overview rings
   const rings = CONFIG.overview.map(o=>{
     const r=o.calc(data);
-    return `<div class="ring" data-open="${o.key}"><div class="dial">${ringSVG(r.value,o.color)}<span class="mid" style="color:${o.color}">${icon(o.icon,23)}</span></div>
-      <div class="pct">${r.value}%</div><div class="lbl">${o.label}</div><div class="sub">${r.sub}</div></div>`;
+    return `<div class="ring" data-open="${o.key}"><div class="pct">${r.value}%</div><div class="dial">${ringSVG(r.value,o.color)}<span class="mid" style="color:${o.color}">${icon(o.icon,23)}</span></div>
+      <div class="lbl">${o.label}</div><div class="sub">${r.sub}</div></div>`;
   }).join("");
 
   // pinned tasks (置顶) — 跨模块收集 item.pinned；就地交互，不跳转
@@ -1458,11 +1462,11 @@ function renderInsight(){
 
 /* ---------- 记账本月历 ---------- */
 function renderMoneyCalendar(items){
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
+  const y = moneyCalMonth.getFullYear(), m = moneyCalMonth.getMonth();
   const dim = new Date(y, m+1, 0).getDate();
   const firstDow = (new Date(y, m, 1).getDay()+6)%7;
   const todayStr = isoToday();
+  const now = new Date();
 
   // 按日汇总
   const dayMap = {};
@@ -1499,7 +1503,7 @@ function renderMoneyCalendar(items){
 
   const dows = ['一','二','三','四','五','六','日'];
   const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  return `<div class="panel mc-panel"><div class="ph">${icon("calendar",15)} ${monthNames[m]} 记账日历<span class="avg">${items.length} 笔</span></div>
+  return `<div class="panel mc-panel"><div class="ph">${icon("calendar",15)}<button class="cal-nav mc-nav-prev">${icon("chevron",14,2)}</button><span style="flex:1;text-align:center">${monthNames[m]}</span><button class="cal-nav mc-nav-next" style="transform:rotate(180deg)">${icon("chevron",14,2)}</button><span class="avg">${items.length} 笔</span></div>
     <div class="cal-dow-row">${dows.map(d=>`<span class="${d==='六'||d==='日'?'wk':''}">${d}</span>`).join("")}</div>
     <div class="mc-grid">${cells}</div>
     <div class="mc-stats"><span>月支出 <b style="color:var(--danger)">¥${totalExp}</b></span><span>月收入 <b style="color:var(--accent)">¥${totalInc}</b></span><span>月结余 <b>¥${totalInc-totalExp}</b></span></div>
@@ -1536,13 +1540,31 @@ function renderModule(key){
     head=headHero(m, `${it.length}`, `条记录 · 今日 ${todayN} 条`, null);
   }
   if(m.type==="checkin") extra=renderCalendar(m,it);
+  // pagination for checkin: 10 per page
+  let pageHtml="";
+  if(m.type==="checkin"){
+    const pageSize=10;
+    const totalPages=Math.ceil(it.length/pageSize);
+    const curPage=Math.min((data[`__pg_${key}`]||1), Math.max(1,totalPages));
+    data[`__pg_${key}`]=curPage;
+    const start=(curPage-1)*pageSize;
+    const pageItems=it.slice(start, start+pageSize);
+    const body2 = pageItems.length ? pageItems.map(x=>recHTML(m,x)).join("")
+      : `<div class="empty"><span class="e">${icon(m.icon,26)}</span><div>还没有记录，点上方「新建」添加第一条吧</div></div>`;
+    pageHtml = `<div class="sec-title">记录<span style="margin-left:auto;font-weight:500;color:var(--text-secondary);font-size:12px">${curPage}/${totalPages||1} 页 · ${it.length} 条</span></div>${body2}
+      ${totalPages>1?`<div style="display:flex;justify-content:center;gap:10px;margin:14px 0 4px">
+        <button class="btn ghost pg-btn" data-pg="prev" ${curPage<=1?'disabled':''} style="flex:0 0 auto;padding:8px 16px">${icon("chevron",14,2)}</button>
+        <button class="btn ghost pg-btn" data-pg="next" ${curPage>=totalPages?'disabled':''} style="flex:0 0 auto;padding:8px 16px;transform:rotate(180deg)">${icon("chevron",14,2)}</button>
+      </div>`:''}`;
+  }
   const body = it.length ? it.map(x=>recHTML(m,x)).join("")
     : `<div class="empty"><span class="e">${icon(m.icon,26)}</span><div>还没有记录，点上方「新建」添加第一条吧</div></div>`;
   $("#screen").innerHTML = `<div class="greet"><div><h1>${m.name}</h1><p>${m.desc}</p></div>
       <button class="add" id="btn-add">${icon("plus",16,2.2)}新建</button></div>
     <div style="margin-top:16px">${head}
-      <div class="sec-title">记录</div>${body}
-      ${extra}</div>`;
+      ${m.type==="checkin"?extra:''}
+      ${m.type==="checkin"?pageHtml:`<div class="sec-title">记录</div>${body}`}
+      ${m.type==="checkin"?'''':extra}</div>`;
   wireModule(key);
 }
 
@@ -1628,6 +1650,16 @@ function wireModule(key){
   $("#screen").querySelectorAll(".js-pin").forEach(el=>el.onclick=e=>{ e.stopPropagation(); const x=(data[key]).find(i=>i.id==el.dataset.id); if(!tryPin(x)) return; x.pinned=!x.pinned; persist(); });
   const add=$("#btn-add"); if(add) add.onclick=()=>openEditor(key,null);
   if(m.type==="checkin") wireCalendar(key, data[key]||[]);
+  // checkin pagination
+  if(m.type==="checkin"){
+    $("#screen").querySelectorAll(".pg-btn").forEach(el=>el.onclick=()=>{
+      const dir=el.dataset.pg;
+      const cur=data[`__pg_${key}`]||1;
+      if(dir==="prev"&&cur>1) data[`__pg_${key}`]=cur-1;
+      else if(dir==="next") data[`__pg_${key}`]=cur+1;
+      render();
+    });
+  }
   // 记账日历：长按日期新建记账
   if(m.type==="finance"){
     $("#screen").querySelectorAll(".mc-day:not(.blank)").forEach(el=>{
@@ -1637,6 +1669,11 @@ function wireModule(key){
       el.addEventListener("pointerup",()=>{ if(timer){ clearTimeout(timer); timer=null; } });
       el.addEventListener("pointerleave",()=>{ if(timer){ clearTimeout(timer); timer=null; } });
     });
+    // 记账日历月份切换
+    const p=$("#screen").querySelector(".mc-nav-prev");
+    const n=$("#screen").querySelector(".mc-nav-next");
+    if(p) p.onclick=()=>{ moneyCalMonth=new Date(moneyCalMonth.getFullYear(), moneyCalMonth.getMonth()-1, 1); render(); };
+    if(n) n.onclick=()=>{ moneyCalMonth=new Date(moneyCalMonth.getFullYear(), moneyCalMonth.getMonth()+1, 1); render(); };
   }
 }
 
