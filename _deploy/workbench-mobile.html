@@ -701,7 +701,7 @@ const CONFIG = {
     { key: "checkin", label: "打卡", icon: "paw", color: "var(--module-4)",
       calc: d => { const it=d.checkin||[]; const t=today(); const done=it.filter(x=>x.log&&x.log[t]).length; return { value: it.length?Math.round(done/it.length*100):0, sub: `${done}/${it.length} 项` }; } },
     { key: "money", label: "本月支出", icon: "wallet", color: "var(--module-3)",
-      calc: d => { const it=(d.money||[]).filter(x=>x.date&&x.date.slice(0,7)===isoToday().slice(0,7)); const exp=it.filter(x=>x.type==='expense').reduce((s,x)=>s+(+x.amount||0),0); const day=new Date().getDate(); const dim=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate(); return {value:Math.round(day/dim*100), sub:`¥${exp}`}; } },
+      calc: d => { const it=(d.money||[]).filter(x=>x.date&&x.date.slice(0,7)===isoToday().slice(0,7)); const exp=it.filter(x=>x.type==='expense').reduce((s,x)=>s+(+x.amount||0),0); const day=new Date().getDate(); const dim=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate(); return {value:exp?Math.round(day/dim*100):0, sub:`¥${exp}`}; } },
     { key: "note", label: "随手记", icon: "pen", color: "var(--module-2)",
       calc: d => { const it=d.note||[]; const now=new Date(); const wk=new Date(now-6*864e5); const recent=it.filter(x=>x.date&&new Date(x.date)>=wk); return {value:Math.min(100,Math.round(recent.length/7*100)), sub:`${recent.length} 篇`}; } },
   ],
@@ -715,10 +715,10 @@ const CONFIG = {
 
   // 快速记录按钮（点了直接给对应模块新建）
   quickAdd: [
+    { label: "打个卡", icon: "paw",    module: "checkin", tint: "rgba(92,255,157,.08)",  color: "var(--module-4)", action:"go" },
     { label: "记待办", icon: "list",   module: "todo",    tint: "rgba(77,217,255,.08)",  color: "var(--accent)", action:"quick" },
-    { label: "去打卡", icon: "paw",    module: "checkin", tint: "rgba(92,255,157,.08)",  color: "var(--module-4)", action:"go" },
-    { label: "记一笔", icon: "wallet", module: "money",   tint: "rgba(255,92,138,.08)",  color: "var(--module-3)", action:"quick" },
-    { label: "记随笔", icon: "pen",    module: "note",    tint: "rgba(180,106,255,.08)", color: "var(--module-2)", action:"quick" },
+    { label: "添笔账", icon: "wallet", module: "money",   tint: "rgba(255,92,138,.08)",  color: "var(--module-3)", action:"quick" },
+    { label: "小本本", icon: "pen",    module: "note",    tint: "rgba(180,106,255,.08)", color: "var(--module-2)", action:"quick" },
   ],
 
   // ============ 模块定义 ============
@@ -754,7 +754,7 @@ const CONFIG = {
       ],
     },
     {
-      key: "sport", name: "长线计划", icon: "target", tint: "rgba(255,180,84,.08)", color: "var(--module-5)", type: "progress", unit: "次", desc: "运动·锻炼·长线计划进度",
+      key: "sport", name: "长线计划", icon: "target", tint: "rgba(255,180,84,.08)", color: "var(--module-5)", type: "progress", unit: "次", desc: "项目·运动·带阶段长线进度管理",
       seed: [
         { id: 41, title: "力量训练", current: 12, target: 20, unit: "分钟", note: "核心 + 上肢，组间休息 60 秒" },
         { id: 42, title: "跑步", current: 30, target: 40, unit: "分钟", note: "慢跑热身，配速 6 分半保持心率" },
@@ -763,7 +763,7 @@ const CONFIG = {
     {
       key: "money", name: "记账本", icon: "wallet", tint: "rgba(255,92,138,.08)", color: "var(--module-3)",
       type: "finance", desc: "收入·支出·分类·占比",
-      categories: ["日常", "购物", "娱乐", "报销", "工资", "副业"],
+      categories: ["日常", "购物", "娱乐", "投资", "报销", "工资", "副业"],
       seed: [
         { id: 51, title: "午餐", type: "expense", amount: 32, category: "日常", date: isoToday() },
         { id: 52, title: "地铁", type: "expense", amount: 6, category: "日常", date: isoToday() },
@@ -879,10 +879,27 @@ const store = {
   sync(){ syncSave(); }
 };
 let data = store.load();
+const MAX_PIN = 4;
 let view = "home";
 let evCalMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let evCalSelected = isoToday();
 function persist(){ store.save(); syncSave(); render(); }
+function tryPin(x){
+  if(x.pinned) return true; // unpinning is always allowed
+  const totalPinned = CONFIG.modules.reduce((s,m)=>s+((data[m.key]||[]).filter(i=>i.pinned).length),0);
+  if(totalPinned >= MAX_PIN){
+    const overlay=document.createElement("div"); overlay.className="overlay";
+    overlay.innerHTML=`<div class="modal"><div class="grab"></div><h2>${icon("paw",22)} 心急吃不了热豆腐</h2>
+      <div class="sub">干完这些再说吧~</div>
+      <div class="modal-actions"><button class="btn" id="p-ok">好吧知道了</button></div></div>`;
+    document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    overlay.onclick=e=>{ if(e.target===overlay) close(); };
+    overlay.querySelector("#p-ok").onclick=close;
+    return false;
+  }
+  return true;
+}
 function pad2(n){ return String(n).padStart(2,"0"); }
 function toast(msg, type=""){
   let wrap=document.querySelector(".toast-wrap");
@@ -997,7 +1014,7 @@ function renderHome(){
     <div class="greet"><div><h1>${hi}，${data.__owner || CONFIG.owner}</h1><p id="greetSub" contenteditable="true" spellcheck="false" title="点击可编辑">${esc(data.__greet || '它们生也快乐，死也快乐，杯子里总有酒喝。')}</p></div></div>
     <div class="sec-title">今日概览</div>
     <div class="card rings">${rings}</div>
-    <div class="sec-title">置顶任务</div>
+    <div class="sec-title">康康进度</div>
     <div class="pin-list">${pinned}</div>
     <div class="sec-title">快速记录</div>
     <div class="quick-grid">${quick}</div>
@@ -1608,7 +1625,7 @@ function wireModule(key){
   });
   $("#screen").querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>openEditor(key,(data[key]).find(i=>i.id==el.dataset.edit)));
   $("#screen").querySelectorAll(".js-del").forEach(el=>el.onclick=e=>{ e.stopPropagation(); confirmDelete(key, el.dataset.id); });
-  $("#screen").querySelectorAll(".js-pin").forEach(el=>el.onclick=e=>{ e.stopPropagation(); const x=(data[key]).find(i=>i.id==el.dataset.id); x.pinned=!x.pinned; persist(); });
+  $("#screen").querySelectorAll(".js-pin").forEach(el=>el.onclick=e=>{ e.stopPropagation(); const x=(data[key]).find(i=>i.id==el.dataset.id); if(!tryPin(x)) return; x.pinned=!x.pinned; persist(); });
   const add=$("#btn-add"); if(add) add.onclick=()=>openEditor(key,null);
   if(m.type==="checkin") wireCalendar(key, data[key]||[]);
   // 记账日历：长按日期新建记账
