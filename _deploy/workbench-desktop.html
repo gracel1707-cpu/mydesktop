@@ -1598,16 +1598,17 @@ function renderMoneyCalendar(items){
   for(let d=1;d<=dim;d++){
     const dd = dayMap[d];
     const isToday = (d===now.getDate()) ? ' today' : '';
+    const dateStr = `${y}-${pad2(m+1)}-${pad2(d)}`;
     if(!dd){
-      cells += `<div class="mc-day${isToday}"><span>${d}</span></div>`;
+      cells += `<div class="mc-day${isToday}" data-date="${dateStr}"><span>${d}</span></div>`;
     } else if(dd.exp > 0 && dd.inc > 0){
       const net = dd.inc - dd.exp;
       const cls = net >= 0 ? 'net-inc' : 'net-exp';
-      cells += `<div class="mc-day ${cls}${isToday}"><span>${d}</span><i>¥${Math.abs(net)}</i></div>`;
+      cells += `<div class="mc-day ${cls}${isToday}" data-date="${dateStr}"><span>${d}</span><i>¥${Math.abs(net)}</i></div>`;
     } else if(dd.exp > 0){
-      cells += `<div class="mc-day exp${isToday}"><span>${d}</span><i>¥${dd.exp}</i></div>`;
+      cells += `<div class="mc-day exp${isToday}" data-date="${dateStr}"><span>${d}</span><i>¥${dd.exp}</i></div>`;
     } else {
-      cells += `<div class="mc-day inc${isToday}"><span>${d}</span><i>¥${dd.inc}</i></div>`;
+      cells += `<div class="mc-day inc${isToday}" data-date="${dateStr}"><span>${d}</span><i>¥${dd.inc}</i></div>`;
     }
   }
 
@@ -1838,11 +1839,18 @@ function wireModule(key){ const m=modOf(key);
   $("#screen").querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>openEditor(key,(data[key]).find(i=>i.id==el.dataset.edit)));
   $("#screen").querySelectorAll(".js-del").forEach(el=>el.onclick=e=>{ e.stopPropagation(); confirmDelete(key, el.dataset.id); });
   $("#screen").querySelectorAll(".js-pin").forEach(el=>el.onclick=e=>{ e.stopPropagation(); const x=(data[key]).find(i=>i.id==el.dataset.id); x.pinned=!x.pinned; persist(x.pinned?"已置顶":"取消置顶"); });
+  // 记账日历：点击日期新建记账
+  if(m.type==="finance"){
+    $("#screen").querySelectorAll(".mc-day:not(.blank)").forEach(el=>{
+      el.style.cursor="pointer";
+      el.onclick=()=>openEditor(key,null,{date:el.dataset.date});
+    });
+  }
 }
 
 /* ---------- EDITOR MODAL (per type) ---------- */
-function openEditor(key,item){
-  const m=modOf(key); const editing=!!item; const d=item||newItem(m);
+function openEditor(key,item,defaults){
+  const m=modOf(key); const editing=!!item; const d=item||(defaults?{...newItem(m),...defaults}:newItem(m));
   let fields="";
   if(m.type==="todo"){
     fields=`<div class="field"><label>任务</label><input id="f-title" value="${attr(d.title)}" placeholder="要做什么？"/></div>

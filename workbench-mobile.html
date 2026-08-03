@@ -1335,7 +1335,6 @@ function renderInsight(){
   // upcoming events (next 5)
   const allEvs = getEvents().sort((a,b)=>a.start.localeCompare(b.start));
   const upcomingEvs = allEvs.filter(e=>e.end.slice(0,10)>=isoToday()).slice(0,5);
-  const evList=upcomingEvs.length ? upcomingEvs.map(ev=>{
 
   // 长线计划统计
   const progressMods=CONFIG.modules.filter(m=>m.type==="progress");
@@ -1467,16 +1466,17 @@ function renderMoneyCalendar(items){
   for(let d=1;d<=dim;d++){
     const dd = dayMap[d];
     const isToday = (d===now.getDate()) ? ' today' : '';
+    const dateStr = `${y}-${pad2(m+1)}-${pad2(d)}`;
     if(!dd){
-      cells += `<div class="mc-day${isToday}"><span>${d}</span></div>`;
+      cells += `<div class="mc-day${isToday}" data-date="${dateStr}"><span>${d}</span></div>`;
     } else if(dd.exp > 0 && dd.inc > 0){
       const net = dd.inc - dd.exp;
       const cls = net >= 0 ? 'net-inc' : 'net-exp';
-      cells += `<div class="mc-day ${cls}${isToday}"><span>${d}</span><i>¥${Math.abs(net)}</i></div>`;
+      cells += `<div class="mc-day ${cls}${isToday}" data-date="${dateStr}"><span>${d}</span><i>¥${Math.abs(net)}</i></div>`;
     } else if(dd.exp > 0){
-      cells += `<div class="mc-day exp${isToday}"><span>${d}</span><i>¥${dd.exp}</i></div>`;
+      cells += `<div class="mc-day exp${isToday}" data-date="${dateStr}"><span>${d}</span><i>¥${dd.exp}</i></div>`;
     } else {
-      cells += `<div class="mc-day inc${isToday}"><span>${d}</span><i>¥${dd.inc}</i></div>`;
+      cells += `<div class="mc-day inc${isToday}" data-date="${dateStr}"><span>${d}</span><i>¥${dd.inc}</i></div>`;
     }
   }
 
@@ -1611,12 +1611,22 @@ function wireModule(key){
   $("#screen").querySelectorAll(".js-pin").forEach(el=>el.onclick=e=>{ e.stopPropagation(); const x=(data[key]).find(i=>i.id==el.dataset.id); x.pinned=!x.pinned; persist(); });
   const add=$("#btn-add"); if(add) add.onclick=()=>openEditor(key,null);
   if(m.type==="checkin") wireCalendar(key, data[key]||[]);
+  // 记账日历：长按日期新建记账
+  if(m.type==="finance"){
+    $("#screen").querySelectorAll(".mc-day:not(.blank)").forEach(el=>{
+      let timer=null;
+      const dateStr=el.dataset.date;
+      el.addEventListener("pointerdown",()=>{ timer=setTimeout(()=>{ timer=null; openEditor(key,null,{date:dateStr}); }, 500); });
+      el.addEventListener("pointerup",()=>{ if(timer){ clearTimeout(timer); timer=null; } });
+      el.addEventListener("pointerleave",()=>{ if(timer){ clearTimeout(timer); timer=null; } });
+    });
+  }
 }
 
 /* ---------- EDITOR MODAL (per type) ---------- */
-function openEditor(key, item){
+function openEditor(key, item, defaults){
   const m=modOf(key); const editing=!!item;
-  const d = item || newItem(m);
+  const d = item || (defaults ? {...newItem(m), ...defaults} : newItem(m));
   let fields="";
   if(m.type==="todo"){
     fields=`<div class="field"><label>任务</label><input id="f-title" value="${attr(d.title)}" placeholder="要做什么？"/></div>
