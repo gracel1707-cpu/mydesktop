@@ -5,22 +5,54 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>个人工作台</title>
 <style>
-  body { margin:0; padding:40px 20px; background:#0d1117; color:#e6edf3; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; text-align:center; }
-  h1 { font-size:22px; margin-bottom:8px; }
-  p { color:#8b949e; font-size:14px; margin-bottom:28px; }
-  .btns { display:flex; flex-direction:column; gap:12px; max-width:300px; margin:0 auto; }
-  a { display:block; padding:14px 20px; border-radius:12px; text-decoration:none; font-weight:700; font-size:15px; transition:.15s; }
-  .mobile { background:#4dd9ff; color:#0d1117; }
-  .desktop { background:#b46aff; color:#fff; }
-  a:active { transform:scale(.96); opacity:.85; }
+  body { margin:0; height:100vh; display:flex; align-items:center; justify-content:center; background:#0d1117; color:#e6edf3;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; text-align:center; }
+  .wrap { max-width:300px; padding:0 20px; }
+  h1 { font-size:22px; margin:0 0 10px; }
+  p  { color:#8b949e; font-size:14px; margin:0 0 20px; }
+  .spinner { width:26px; height:26px; border:3px solid rgba(230,237,243,.15); border-top-color:#4dd9ff;
+    border-radius:50%; margin:0 auto 14px; animation:sp .8s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .btns { display:none; }
+  .btns a { display:block; padding:14px 20px; border-radius:12px; text-decoration:none; font-weight:700; font-size:15px; }
+  .btns a + a { margin-top:12px; }
+  .btns .mobile { background:#4dd9ff; color:#0d1117; }
+  .btns .desktop { background:#b46aff; color:#fff; }
 </style>
 </head>
 <body>
-<h1>个人工作台</h1>
-<p>选择要打开的版本</p>
-<div class="btns">
-  <a class="mobile" href="workbench-mobile.html">移动版</a>
-  <a class="desktop" href="workbench-desktop.html">桌面版</a>
+<div class="wrap">
+  <h1>个人工作台</h1>
+  <p id="tip">正在进入…</p>
+  <div class="spinner"></div>
 </div>
+<script>
+(function(){
+  var KEY="wb_version", pref=null;
+  try{ pref=localStorage.getItem(KEY); }catch(e){}
+  var v;
+  if(pref==="mobile"||pref==="desktop"){ v=pref; }
+  else{
+    var coarse = (typeof navigator!=="undefined") && navigator.maxTouchPoints>0 &&
+      window.matchMedia && window.matchMedia("(pointer:coarse)").matches;
+    var narrow = window.matchMedia ? window.matchMedia("(max-width:820px)").matches
+      : (window.innerWidth||document.documentElement.clientWidth)<=820;
+    v = (narrow||coarse) ? "mobile" : "desktop";
+  }
+  var tip=document.getElementById("tip");
+  if(tip) tip.textContent = "正在进入"+(v==="mobile"?"移动":"桌面")+"版…";
+  location.replace(v==="mobile" ? "workbench-mobile.html" : "workbench-desktop.html");
+})();
+</script>
+<noscript>
+  <div class="wrap">
+    <h1>个人工作台</h1>
+    <p>请选择要打开的版本</p>
+    <div class="btns" style="display:block">
+      <a class="mobile" href="workbench-mobile.html">移动版</a>
+      <a class="desktop" href="workbench-desktop.html">桌面版</a>
+    </div>
+  </div>
+</noscript>
 </body>
 </html>
