@@ -1329,18 +1329,17 @@ function overviewTileHTML(){
       <div class="pct">${r.value}%</div><div class="lbl">${o.label}</div><div class="sub">${r.sub}</div></div>`; }).join("");
   const recCount=CONFIG.modules.reduce((s,m)=>s+((data[m.key]||[]).length),0);
   const pinCount=CONFIG.modules.reduce((s,m)=>s+((data[m.key]||[]).filter(x=>x.pinned).length),0);
-  const money=data.money||[];
-  const inc=money.filter(x=>x.type==="income").reduce((a,x)=>a+ +x.amount,0);
-  const exp=money.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
+  const ym=isoToday().slice(0,7);
+  const mRecs=(data.money||[]).filter(x=>x.type==="expense"&&x.date&&x.date.slice(0,7)===ym);
+  const mExp=mRecs.reduce((a,x)=>a+ +x.amount,0);
   const budget=+(data.__budget||0);
-  const bal=budget?budget-exp:inc-exp, balCol=bal>=0?"var(--module-1)":"var(--danger)";
   return `<div class="tile b12"><div class="tile-h"><span class="tic">${icon("target",16)}</span><div class="tt"><span class="en">DAILY VITALS</span><span class="zh">今日概览</span></div><span class="r">${dateStr()}</span></div>
     <div class="ov2-body">
       <div class="rings">${rings}</div>
       <div class="ov2-side">
         <div class="ov2-stat" data-open="note"><span class="s-ic" style="color:var(--module-2)">${icon("chart",17)}</span><div class="s-tx"><div class="s-v">${recCount}</div><div class="s-l">累计记录条数</div></div></div>
         <div class="ov2-stat"><span class="s-ic" style="color:var(--module-3)">${icon("star",17)}</span><div class="s-tx"><div class="s-v">${pinCount}</div><div class="s-l">置顶要事</div></div></div>
-        <div class="ov2-stat" data-open="money"><span class="s-ic" style="color:${balCol}">${icon("wallet",17)}</span><div class="s-tx"><div class="s-v" style="color:${balCol}">${bal>=0?'+':'-'}¥${Math.abs(bal)}</div><div class="s-l">${budget?`预算余 · 支¥${exp}`:`本月结余 · 收¥${inc} 支¥${exp}`}</div></div></div>
+        <div class="ov2-stat" data-open="money"><span class="s-ic" style="color:var(--module-3)">${icon("wallet",17)}</span><div class="s-tx"><div class="s-v" style="color:var(--danger)">¥${mExp}</div><div class="s-l">本月支出 · ${mRecs.length} 笔${budget?` · 预算 ¥${budget}`:''}</div></div></div>
       </div>
     </div></div>`;
 }
@@ -1421,7 +1420,9 @@ function calendarTileHTML(){
 
 /* 月度开销：finance 支出按分类占比 */
 function spendTileHTML(){
-  const all=data.money||[]; const exp=all.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
+  const ym=isoToday().slice(0,7);
+  const all=(data.money||[]).filter(x=>x.date&&x.date.slice(0,7)===ym);
+  const exp=all.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
   const palette=["var(--module-4)","var(--module-3)","var(--module-1)","var(--module-2)","var(--module-5)","var(--accent)","var(--danger)"];
   const byCat={}; all.filter(x=>x.type==="expense").forEach(x=>{ const c=x.category||"其他"; byCat[c]=(byCat[c]||0)+ +x.amount; });
   const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
@@ -1677,6 +1678,10 @@ function renderMoneyCalendar(items){
   const firstDow = (new Date(y, m, 1).getDay()+6)%7;
   const todayStr = isoToday();
 
+  // 只统计当月账目，避免把其他月份错位归到本月日期上
+  const ym=`${y}-${pad2(m+1)}`;
+  items=items.filter(x=>x.date&&x.date.slice(0,7)===ym);
+
   // 按日汇总
   const dayMap = {};
   items.forEach(x=>{
@@ -1728,16 +1733,25 @@ function renderModule(key){
 
   let head="", extra="";
   if(m.type==="finance"){
-    const exp=all.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
+    const ym=isoToday().slice(0,7), yyyy=isoToday().slice(0,4);
+    const mRecs=all.filter(x=>x.date&&x.date.slice(0,7)===ym);
+    const yRecs=all.filter(x=>x.date&&x.date.slice(0,4)===yyyy);
+    const mExp=mRecs.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
     const budget=+(data.__budget||0);
-    const remain=budget-exp;
+    const mBal=budget-mExp, mBalCol=budget?(mBal>=0?'var(--module-4)':'var(--danger)'):'';
+    const yExp=yRecs.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
+    const yInc=yRecs.filter(x=>x.type==="income").reduce((a,x)=>a+ +x.amount,0);
+    const yNet=yInc-yExp;
+    const mini=(l,v,col,click)=>`<div class="mini${click?' js-budget':''}"${click?' style="cursor:pointer"':''}><div class="l">${l}</div><div class="v" ${col?`style="color:${col}"`:''}>${v}</div></div>`;
     head=`<div style="display:grid;grid-template-columns:1fr 300px;gap:16px;margin-bottom:4px">
       <div class="mod-summary" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
-        <div class="mini js-budget" style="cursor:pointer" title="点击设置预算"><div class="l">预算</div><div class="v" style="color:var(--module-5)">${budget?`¥${budget}`:'—'}</div></div>
-        <div class="mini"><div class="l">支出</div><div class="v" style="color:var(--danger)">¥${exp}</div></div>
-        <div class="mini"><div class="l">预算余</div><div class="v" style="color:${budget?(remain>=0?'var(--module-4)':'var(--danger)'):''}">${budget?(remain>=0?'+':'-')+'¥'+Math.abs(remain):'—'}</div></div></div>
+        ${mini("月预算",budget?`¥${budget}`:'—','var(--module-5)',true)}
+        ${mini("月支出",`¥${mExp}`,'var(--danger)')}
+        ${mini("月余额",budget?(mBal>=0?'+':'-')+'¥'+Math.abs(mBal):'—',mBalCol)}</div>
       <div class="mod-summary" style="grid-template-columns:1fr;margin-bottom:0">
-        <div class="mini"><div class="l">笔数</div><div class="v">${all.length}</div></div></div></div>`;
+        ${mini("年度支出",`¥${yExp}`,'var(--danger)')}
+        ${mini("年度收入",`¥${yInc}`,'var(--accent)')}
+        ${mini("年度差额",(yNet>=0?'+':'-')+'¥'+Math.abs(yNet),yNet>=0?'var(--module-1)':'var(--danger)')}</div></div>`;
     extra = renderMoneyCalendar(all);
   } else if(m.type==="todo"){
     const rec=todoWeek(data); const done=rec.filter(x=>x.done).length;
@@ -1801,25 +1815,28 @@ function sideStats(m, all){
   const row=(k,v,dot)=>`<div class="stat-row"><span class="k">${dot?`<span class="kd" style="background:${dot}"></span>`:''}${k}</span><span class="val">${v}</span></div>`;
 
   if(m.type==="finance"){
-    const inc=all.filter(x=>x.type==="income").reduce((a,x)=>a+ +x.amount,0);
-    const exp=all.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
+    const ym=isoToday().slice(0,7);
+    const mRecs=all.filter(x=>x.date&&x.date.slice(0,7)===ym);
+    const mInc=mRecs.filter(x=>x.type==="income").reduce((a,x)=>a+ +x.amount,0);
+    const mExp=mRecs.filter(x=>x.type==="expense").reduce((a,x)=>a+ +x.amount,0);
     const budget=+(data.__budget||0);
-    const remain=budget-exp;
-    // 支出按分类聚合
-    const byCat={}; all.filter(x=>x.type==="expense").forEach(x=>{ const c=x.category||"其他"; byCat[c]=(byCat[c]||0)+ +x.amount; });
+    const mBal=budget-mExp, mBalCol=budget?(mBal>=0?'var(--module-4)':'var(--danger)'):'';
+    const todayStr=isoToday();
+    const todayExp=mRecs.filter(x=>x.type==="expense"&&x.date===todayStr).reduce((a,x)=>a+ +x.amount,0);
+    // 本月支出按分类聚合
+    const byCat={}; mRecs.filter(x=>x.type==="expense").forEach(x=>{ const c=x.category||"其他"; byCat[c]=(byCat[c]||0)+ +x.amount; });
     const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
     const maxC=cats.length?cats[0][1]:1;
     const catBars=cats.length? cats.map((c,i)=>`<div class="cbrow"><span class="cbn">${esc(c[0])}</span><span class="cbt"><i style="width:${Math.round(c[1]/maxC*100)}%;background:${palette[i%palette.length]}"></i></span><span class="cbv">¥${c[1]}</span></div>`).join("")
-      : `<div style="color:var(--text-tertiary);font-size:12.5px;padding:6px 0">暂无支出记录</div>`;
-    const todayExp=all.filter(x=>x.type==="expense"&&x.date===t).reduce((a,x)=>a+ +x.amount,0);
-    return `<div class="side-card"><div class="sh">${icon("wallet",15)} 收支概况</div>
-        ${row("总收入",`<span style="color:var(--module-1)">¥${inc}</span>`)}
-        ${row("总支出",`<span style="color:var(--danger)">¥${exp}</span>`)}
+      : `<div style="color:var(--text-tertiary);font-size:12.5px;padding:6px 0">本月暂无支出记录</div>`;
+    return `<div class="side-card"><div class="sh">${icon("wallet",15)} 本月收支</div>
+        ${row("本月收入",`<span style="color:var(--accent)">¥${mInc}</span>`)}
+        ${row("本月支出",`<span style="color:var(--danger)">¥${mExp}</span>`)}
+        ${row("本月笔数",`${mRecs.length} 笔`)}
         ${row("本月预算",`<span class="js-budget" style="cursor:pointer;color:var(--module-5)">${budget?`¥${budget}`:'点击设置'}</span>`)}
-        ${row("预算余",`<span style="color:${budget?(remain>=0?'var(--module-4)':'var(--danger)'):''}">${budget?(remain>=0?'+':'-')+'¥'+Math.abs(remain):'—'}</span>`)}
-        ${row("今日支出",`¥${todayExp}`)}
-        ${row("总笔数",`${all.length} 笔`)}</div>
-      <div class="side-card"><div class="sh">${icon("chart",15)} 支出分类占比</div><div class="catbar">${catBars}</div></div>`;
+        ${row("月余额",`<span style="color:${mBalCol||'inherit'}">${budget?(mBal>=0?'+':'-')+'¥'+Math.abs(mBal):'—'}</span>`)}
+        ${row("今日支出",`¥${todayExp}`)}</div>
+      <div class="side-card"><div class="sh">${icon("chart",15)} 本月支出分类</div><div class="catbar">${catBars}</div></div>`;
   }
 
   if(m.type==="progress"){

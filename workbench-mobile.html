@@ -1547,6 +1547,10 @@ function renderMoneyCalendar(items){
   const todayStr = isoToday();
   const now = new Date();
 
+  // 只统计当前显示月份的账目，避免把其他月份错位归到本月日期上
+  const ym=`${y}-${pad2(m+1)}`;
+  items=items.filter(x=>x.date&&x.date.slice(0,7)===ym);
+
   // 按日汇总
   const dayMap = {};
   items.forEach(x=>{
@@ -1597,13 +1601,23 @@ function renderModule(key){
   const t=today();
   let head="", extra="";
   if(m.type==="finance"){
-    const exp=it.filter(x=>x.type==="expense").reduce((s,x)=>s+ +x.amount,0);
+    const ym=isoToday().slice(0,7), yyyy=isoToday().slice(0,4);
+    const mRecs=it.filter(x=>x.date&&x.date.slice(0,7)===ym);
+    const yRecs=it.filter(x=>x.date&&x.date.slice(0,4)===yyyy);
+    const mExp=mRecs.filter(x=>x.type==="expense").reduce((s,x)=>s+ +x.amount,0);
     const budget=+(data.__budget||0);
-    const remain=budget-exp;
+    const mBal=budget-mExp, mBalCol=budget?(mBal>=0?'var(--module-4)':'var(--danger)'):'';
+    const yExp=yRecs.filter(x=>x.type==="expense").reduce((s,x)=>s+ +x.amount,0);
+    const yInc=yRecs.filter(x=>x.type==="income").reduce((s,x)=>s+ +x.amount,0);
+    const yNet=yInc-yExp;
     head=`<div class="mod-summary">
-      <div class="mini js-budget" style="cursor:pointer" title="点击设置预算"><div class="l">预算</div><div class="v" style="color:var(--module-5)">${budget?`¥${budget}`:'—'}</div></div>
-      <div class="mini"><div class="l">支出</div><div class="v" style="color:var(--danger)">¥${exp}</div></div>
-      <div class="mini"><div class="l">预算余</div><div class="v" style="color:${budget?(remain>=0?'var(--module-4)':'var(--danger)'):''}">${budget?(remain>=0?'+':'-')+'¥'+Math.abs(remain):'—'}</div></div></div>`;
+      <div class="mini js-budget" style="cursor:pointer" title="点击设置预算"><div class="l">月预算</div><div class="v" style="color:var(--module-5)">${budget?`¥${budget}`:'—'}</div></div>
+      <div class="mini"><div class="l">月支出</div><div class="v" style="color:var(--danger)">¥${mExp}</div></div>
+      <div class="mini"><div class="l">月余额</div><div class="v" style="color:${mBalCol}">${budget?(mBal>=0?'+':'-')+'¥'+Math.abs(mBal):'—'}</div></div></div>
+    <div class="mod-summary" style="margin-bottom:0">
+      <div class="mini"><div class="l">年度支出</div><div class="v" style="color:var(--danger)">¥${yExp}</div></div>
+      <div class="mini"><div class="l">年度收入</div><div class="v" style="color:var(--accent)">¥${yInc}</div></div>
+      <div class="mini"><div class="l">年度差额</div><div class="v" style="color:${yNet>=0?'var(--module-4)':'var(--danger)'}">${yNet>=0?'+':'-'}¥${Math.abs(yNet)}</div></div></div>`;
     extra = renderMoneyCalendar(it);
   } else if(m.type==="todo"){
     const rec=todoWeek(data); const done=rec.filter(x=>x.done).length; const pct=rec.length?Math.round(done/rec.length*100):0;
